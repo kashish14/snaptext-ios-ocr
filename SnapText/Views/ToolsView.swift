@@ -4,7 +4,7 @@ struct ToolsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 28) {
                     // Scan & Extract
                     toolSection("Scan & Extract", icon: "viewfinder") {
                         toolGrid([
@@ -72,6 +72,7 @@ struct ToolsView: View {
                 }
                 .padding(.top, 8)
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Tools")
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -80,32 +81,33 @@ struct ToolsView: View {
     // MARK: - Helpers
 
     private func toolSection<Content: View>(_ title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.subheadline)
-                    .foregroundStyle(.tint)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.blue)
                 Text(title)
                     .font(.headline)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 20)
             content()
         }
     }
 
     private func toolGrid(_ items: [ToolItem]) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
             ForEach(items) { item in
                 NavigationLink {
                     item.destination
                 } label: {
                     VStack(spacing: 8) {
                         Image(systemName: item.icon)
-                            .font(.title2)
+                            .font(.title3.weight(.medium))
                             .foregroundStyle(.white)
-                            .frame(width: 44, height: 44)
+                            .frame(width: 46, height: 46)
                             .background(item.color.gradient)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .clipShape(RoundedRectangle(cornerRadius: 13))
+                            .shadow(color: item.color.opacity(0.3), radius: 4, y: 2)
 
                         Text(item.title)
                             .font(.caption2.weight(.medium))
@@ -116,8 +118,9 @@ struct ToolsView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color(.secondarySystemBackground))
+                    .background(Color(.secondarySystemGroupedBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .shadow(color: .black.opacity(0.04), radius: 3, y: 2)
                 }
             }
         }

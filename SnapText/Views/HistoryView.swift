@@ -20,23 +20,21 @@ struct HistoryView: View {
         NavigationStack {
             Group {
                 if historyItems.isEmpty {
-                    ContentUnavailableView(
-                        "No Scans Yet",
-                        systemImage: "clock",
-                        description: Text("Your scan history will appear here.")
-                    )
+                    emptyState
                 } else if filteredItems.isEmpty {
                     ContentUnavailableView.search(text: searchText)
                 } else {
-                    List {
-                        ForEach(filteredItems) { item in
-                            HistoryRow(item: item)
-                                .contentShape(Rectangle())
-                                .onTapGesture { selectedItem = item }
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(filteredItems) { item in
+                                HistoryCard(item: item)
+                                    .onTapGesture { selectedItem = item }
+                            }
                         }
-                        .onDelete(perform: deleteItems)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
                     }
-                    .listStyle(.plain)
+                    .background(Color(.systemGroupedBackground))
                 }
             }
             .navigationTitle("History")
@@ -55,6 +53,31 @@ struct HistoryView: View {
         }
     }
 
+    private var emptyState: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.08))
+                    .frame(width: 120, height: 120)
+                Image(systemName: "clock")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(spacing: 8) {
+                Text("No Scans Yet")
+                    .font(.title3.bold())
+                Text("Your scan history will appear here.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+    }
+
     private func deleteItems(at offsets: IndexSet) {
         for index in offsets {
             modelContext.delete(filteredItems[index])
@@ -63,9 +86,9 @@ struct HistoryView: View {
     }
 }
 
-// MARK: - History Row
+// MARK: - History Card
 
-private struct HistoryRow: View {
+private struct HistoryCard: View {
     let item: ScanHistoryItem
 
     var body: some View {
@@ -75,40 +98,53 @@ private struct HistoryRow: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 50, height: 50)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
             } else {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(.tertiarySystemBackground))
-                    .frame(width: 50, height: 50)
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.blue.opacity(0.08))
+                    .frame(width: 56, height: 56)
                     .overlay {
                         Image(systemName: "doc.text")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.blue.opacity(0.5))
                     }
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                // Text preview
+            VStack(alignment: .leading, spacing: 5) {
                 Text(item.textPreview)
-                    .font(.subheadline)
+                    .font(.subheadline.weight(.medium))
                     .lineLimit(2)
+                    .multilineTextAlignment(.leading)
 
-                // Timestamp
-                Text(item.timestamp.timeAgoDisplay())
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Image(systemName: "clock")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Text(item.timestamp.timeAgoDisplay())
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
 
-                // Smart entity badges
+                // Entity badges
                 if !item.entities.isEmpty {
                     entityBadges
                 }
             }
+
+            Spacer(minLength: 4)
+
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.quaternary)
         }
-        .padding(.vertical, 4)
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.04), radius: 3, y: 2)
     }
 
     private var entityBadges: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             ForEach(entitySummary, id: \.label) { badge in
                 HStack(spacing: 3) {
                     Image(systemName: badge.icon)
@@ -117,7 +153,7 @@ private struct HistoryRow: View {
                 .font(.caption2)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(badge.color.opacity(0.15))
+                .background(badge.color.opacity(0.1))
                 .foregroundStyle(badge.color)
                 .clipShape(Capsule())
             }
@@ -126,8 +162,7 @@ private struct HistoryRow: View {
 
     private var entitySummary: [EntityBadge] {
         let categories = EntityCategoryHelper.categories(from: item.entities)
-        // Show top 4 badges to avoid overflow in the row
-        return categories.prefix(4).map { cat in
+        return categories.prefix(3).map { cat in
             EntityBadge(icon: cat.icon, label: "\(cat.count) \(cat.label)", color: cat.color)
         }
     }
@@ -151,74 +186,101 @@ private struct HistoryDetailView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    // Thumbnail (tap to view fullscreen)
+                VStack(spacing: 0) {
+                    // Hero image
                     if let image = item.thumbnailImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 200)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .shadow(radius: 4)
-                            .padding(.horizontal)
-                            .onTapGesture { showFullscreenImage = true }
-                            .overlay(alignment: .bottomTrailing) {
+                        ZStack(alignment: .bottom) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxHeight: 220)
+                                .frame(maxWidth: .infinity)
+                                .clipped()
+                                .onTapGesture { showFullscreenImage = true }
+
+                            LinearGradient(
+                                colors: [.clear, Color(.systemGroupedBackground)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            .frame(height: 60)
+
+                            HStack {
+                                Spacer()
                                 Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                    .font(.caption)
+                                    .font(.caption2.bold())
                                     .padding(6)
                                     .background(.ultraThinMaterial)
                                     .clipShape(Circle())
-                                    .padding(.horizontal, 24)
-                                    .padding(.bottom, 8)
+                                    .padding(12)
                             }
-                    }
-
-                    // Smart entities
-                    if !item.entities.isEmpty {
-                        smartEntitiesSection
-                    }
-
-                    // Full text
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Full Text")
-                            .font(.headline)
-                            .padding(.horizontal)
-
-                        SelectableTextView(text: item.text)
-                            .frame(maxWidth: .infinity)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .padding(.horizontal)
-                    }
-
-                    // Actions
-                    HStack(spacing: 16) {
-                        Button {
-                            ClipboardManager.shared.copy(item.text, source: "History")
-                            showCopiedFeedback()
-                        } label: {
-                            Label("Copy All", systemImage: "doc.on.doc.fill")
-                                .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-
-                        ShareLink(item: item.text) {
-                            Label("Share", systemImage: "square.and.arrow.up")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
-                    }
-                    .padding(.horizontal)
-
-                    // Translate
-                    TranslateButton(text: item.text)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
                         .padding(.horizontal)
+                        .padding(.top, 8)
+                    }
+
+                    VStack(spacing: 20) {
+                        // Smart entities
+                        if !item.entities.isEmpty {
+                            smartEntitiesSection
+                                .padding(.top, 8)
+                        }
+
+                        // Full text
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "doc.text")
+                                    .foregroundStyle(.blue)
+                                Text("Full Text")
+                                    .font(.headline)
+                            }
+                            .padding(.horizontal)
+
+                            SelectableTextView(text: item.text)
+                                .frame(maxWidth: .infinity)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(4)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                                .shadow(color: .black.opacity(0.04), radius: 4, y: 2)
+                                .padding(.horizontal)
+                        }
+
+                        // Actions
+                        VStack(spacing: 10) {
+                            HStack(spacing: 12) {
+                                Button {
+                                    ClipboardManager.shared.copy(item.text, source: "History")
+                                    showCopiedFeedback()
+                                } label: {
+                                    Label("Copy All", systemImage: "doc.on.doc.fill")
+                                        .font(.body.weight(.semibold))
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                                ShareLink(item: item.text) {
+                                    Label("Share", systemImage: "square.and.arrow.up")
+                                        .font(.body.weight(.semibold))
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                }
+                                .buttonStyle(.bordered)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                            }
+
+                            TranslateButton(text: item.text)
+                        }
+                        .padding(.horizontal)
+                    }
+                    .padding(.bottom, 20)
                 }
-                .padding(.vertical)
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Scan Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -228,8 +290,21 @@ private struct HistoryDetailView: View {
             }
             .overlay(alignment: .bottom) {
                 if showCopiedToast {
-                    copiedToast
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                        Text("Copied!")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 14)
+                    .background(
+                        Capsule()
+                            .fill(Color.green.gradient)
+                            .shadow(color: .green.opacity(0.3), radius: 8, y: 4)
+                    )
+                    .padding(.bottom, 30)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .sheet(item: $showEntitySheet) { type in
@@ -253,27 +328,37 @@ private struct HistoryDetailView: View {
 
     private var smartEntitiesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Detected")
-                .font(.headline)
-                .padding(.horizontal)
+            HStack {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(.orange)
+                Text("Detected")
+                    .font(.headline)
+            }
+            .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     ForEach(entityCategories, id: \.type) { category in
                         Button {
                             showEntitySheet = category.type
                         } label: {
-                            HStack(spacing: 6) {
+                            HStack(spacing: 5) {
                                 Image(systemName: category.icon)
+                                    .font(.caption2)
+                                Text("\(category.count)")
+                                    .font(.caption.bold())
+                                Text(category.label)
                                     .font(.caption)
-                                Text("\(category.count) \(category.label)")
-                                    .font(.caption.weight(.medium))
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(category.color)
-                            .foregroundStyle(.white)
+                            .background(category.color.opacity(0.15))
+                            .foregroundStyle(category.color)
                             .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(category.color.opacity(0.3), lineWidth: 1)
+                            )
                         }
                     }
                 }
@@ -282,30 +367,13 @@ private struct HistoryDetailView: View {
         }
     }
 
-    private var copiedToast: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-            Text("Copied to clipboard!")
-        }
-        .font(.subheadline.weight(.medium))
-        .foregroundStyle(.white)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(Color.green)
-        .clipShape(Capsule())
-        .shadow(radius: 8)
-        .padding(.bottom, 30)
-    }
-
     private func showCopiedFeedback() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-        withAnimation(.easeInOut(duration: 0.3)) { showCopiedToast = true }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        withAnimation(.spring(duration: 0.3)) { showCopiedToast = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation(.easeInOut(duration: 0.3)) { showCopiedToast = false }
+            withAnimation(.spring(duration: 0.3)) { showCopiedToast = false }
         }
     }
-
 }
 
 // MARK: - Time Ago Formatter

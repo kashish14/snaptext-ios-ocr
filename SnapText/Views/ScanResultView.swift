@@ -16,39 +16,58 @@ struct ScanResultView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    // Source image thumbnail (tap to view fullscreen)
-                    Image(uiImage: result.image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 200)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .shadow(radius: 4)
-                        .padding(.horizontal)
-                        .onTapGesture { showFullscreenImage = true }
-                        .overlay(alignment: .bottomTrailing) {
+                VStack(spacing: 0) {
+                    // Hero image with gradient overlay
+                    ZStack(alignment: .bottom) {
+                        Image(uiImage: result.image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxHeight: 220)
+                            .frame(maxWidth: .infinity)
+                            .clipped()
+                            .onTapGesture { showFullscreenImage = true }
+
+                        // Gradient fade at bottom
+                        LinearGradient(
+                            colors: [.clear, Color(.systemBackground)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 60)
+
+                        // Expand indicator
+                        HStack {
+                            Spacer()
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                .font(.caption)
+                                .font(.caption2.bold())
                                 .padding(6)
                                 .background(.ultraThinMaterial)
                                 .clipShape(Circle())
-                                .padding(.horizontal, 24)
-                                .padding(.bottom, 8)
+                                .padding(12)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
+                    VStack(spacing: 20) {
+                        // Smart entities
+                        if !result.entities.isEmpty {
+                            smartEntitiesSection
+                                .padding(.top, 8)
                         }
 
-                    // Smart entities (OTPs first, then others)
-                    if !result.entities.isEmpty {
-                        smartEntitiesSection
+                        // Extracted text
+                        extractedTextSection
+
+                        // Action buttons
+                        actionButtons
                     }
-
-                    // Extracted text
-                    extractedTextSection
-
-                    // Action buttons
-                    actionButtons
+                    .padding(.bottom, 20)
                 }
-                .padding(.vertical)
             }
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Extracted Text")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -80,27 +99,37 @@ struct ScanResultView: View {
 
     private var smartEntitiesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Detected")
-                .font(.headline)
-                .padding(.horizontal)
+            HStack {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(.orange)
+                Text("Detected")
+                    .font(.headline)
+            }
+            .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     ForEach(entityCategories, id: \.type) { category in
                         Button {
                             handleCategoryTap(category.type)
                         } label: {
-                            HStack(spacing: 6) {
+                            HStack(spacing: 5) {
                                 Image(systemName: category.icon)
+                                    .font(.caption2)
+                                Text("\(category.count)")
+                                    .font(.caption.bold())
+                                Text(category.label)
                                     .font(.caption)
-                                Text("\(category.count) \(category.label)")
-                                    .font(.caption.weight(.medium))
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(category.color)
-                            .foregroundStyle(.white)
+                            .background(category.color.opacity(0.15))
+                            .foregroundStyle(category.color)
                             .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(category.color.opacity(0.3), lineWidth: 1)
+                            )
                         }
                     }
                 }
@@ -113,15 +142,21 @@ struct ScanResultView: View {
 
     private var extractedTextSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Full Text")
-                .font(.headline)
-                .padding(.horizontal)
+            HStack {
+                Image(systemName: "doc.text")
+                    .foregroundStyle(.blue)
+                Text("Full Text")
+                    .font(.headline)
+            }
+            .padding(.horizontal)
 
             SelectableTextView(text: result.text)
                 .frame(maxWidth: .infinity)
                 .fixedSize(horizontal: false, vertical: true)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(4)
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .shadow(color: .black.opacity(0.04), radius: 4, y: 2)
                 .padding(.horizontal)
         }
     }
@@ -129,24 +164,28 @@ struct ScanResultView: View {
     // MARK: - Actions
 
     private var actionButtons: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 16) {
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Button {
                     onCopy(result.text)
                     showCopiedFeedback()
                 } label: {
                     Label("Copy All", systemImage: "doc.on.doc.fill")
+                        .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                 }
                 .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
 
                 ShareLink(item: result.text) {
                     Label("Share", systemImage: "square.and.arrow.up")
+                        .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.large)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
 
             TranslateButton(text: result.text)
@@ -159,31 +198,27 @@ struct ScanResultView: View {
     private var copiedToast: some View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
-            Text("Copied to clipboard!")
+            Text("Copied!")
         }
-        .font(.subheadline.weight(.medium))
+        .font(.subheadline.weight(.semibold))
         .foregroundStyle(.white)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(Color.green)
-        .clipShape(Capsule())
-        .shadow(radius: 8)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .background(
+            Capsule()
+                .fill(Color.green.gradient)
+                .shadow(color: .green.opacity(0.3), radius: 8, y: 4)
+        )
         .padding(.bottom, 30)
     }
 
     // MARK: - Helpers
 
     private func showCopiedFeedback() {
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(.success)
-
-        withAnimation(.easeInOut(duration: 0.3)) {
-            showCopiedToast = true
-        }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        withAnimation(.spring(duration: 0.3)) { showCopiedToast = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                showCopiedToast = false
-            }
+            withAnimation(.spring(duration: 0.3)) { showCopiedToast = false }
         }
     }
 

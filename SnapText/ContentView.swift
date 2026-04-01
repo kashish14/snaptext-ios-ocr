@@ -21,8 +21,14 @@ struct ContentView: View {
                 HistoryView()
             }
         }
+        .tint(.blue)
         .onAppear {
             ClipboardManager.shared.modelContext = modelContext
+            // Polished tab bar appearance
+            let tabAppearance = UITabBarAppearance()
+            tabAppearance.configureWithDefaultBackground()
+            UITabBar.appearance().scrollEdgeAppearance = tabAppearance
+            UITabBar.appearance().standardAppearance = tabAppearance
         }
     }
 }

@@ -17,21 +17,20 @@ struct ClipboardHistoryView: View {
         NavigationStack {
             Group {
                 if items.isEmpty {
-                    ContentUnavailableView(
-                        "No Clipboard History",
-                        systemImage: "clipboard",
-                        description: Text("Items you copy from scans will appear here.")
-                    )
+                    emptyState
                 } else if filteredItems.isEmpty {
                     ContentUnavailableView.search(text: searchText)
                 } else {
-                    List {
-                        ForEach(filteredItems) { item in
-                            clipboardRow(item)
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(filteredItems) { item in
+                                clipboardCard(item)
+                            }
                         }
-                        .onDelete(perform: deleteItems)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
                     }
-                    .listStyle(.plain)
+                    .background(Color(.systemGroupedBackground))
                 }
             }
             .navigationTitle("Clipboard")
@@ -41,41 +40,82 @@ struct ClipboardHistoryView: View {
                 if !items.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Clear All", role: .destructive) {
-                            for item in items { modelContext.delete(item) }
-                            try? modelContext.save()
+                            withAnimation {
+                                for item in items { modelContext.delete(item) }
+                                try? modelContext.save()
+                            }
                         }
+                        .font(.caption)
                     }
                 }
             }
         }
     }
 
-    private func clipboardRow(_ item: ClipboardItem) -> some View {
+    private var emptyState: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.08))
+                    .frame(width: 120, height: 120)
+                Image(systemName: "clipboard")
+                    .font(.system(size: 48, weight: .light))
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(spacing: 8) {
+                Text("No Clipboard History")
+                    .font(.title3.bold())
+                Text("Items you copy from scans will appear here.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 40)
+    }
+
+    private func clipboardCard(_ item: ClipboardItem) -> some View {
         Button {
             UIPasteboard.general.string = item.text
             copiedId = item.id
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                if copiedId == item.id { copiedId = nil }
+                withAnimation { if copiedId == item.id { copiedId = nil } }
             }
-        } label: { // Re-copy only — no duplicate history entry
+        } label: {
             HStack(spacing: 12) {
+                // Source icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.accentColor.opacity(0.1))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: sourceIcon(for: item.sourceLabel))
+                        .font(.body)
+                        .foregroundStyle(Color.accentColor)
+                }
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.preview)
                         .font(.subheadline)
                         .foregroundStyle(.primary)
                         .lineLimit(2)
+                        .multilineTextAlignment(.leading)
 
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Text(item.timestamp.timeAgoDisplay())
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.tertiary)
                         if let source = item.sourceLabel {
                             Text(source)
-                                .font(.caption2)
+                                .font(.caption2.weight(.medium))
                                 .padding(.horizontal, 6)
-                                .padding(.vertical, 1)
-                                .background(Color.accentColor.opacity(0.15))
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor.opacity(0.1))
                                 .foregroundStyle(Color.accentColor)
                                 .clipShape(Capsule())
                         }
@@ -85,18 +125,41 @@ struct ClipboardHistoryView: View {
                 Spacer()
 
                 Image(systemName: copiedId == item.id ? "checkmark.circle.fill" : "doc.on.doc")
-                    .foregroundStyle(copiedId == item.id ? .green : .secondary)
                     .font(.title3)
+                    .foregroundStyle(copiedId == item.id ? Color.green : Color(.tertiaryLabel))
+                    .contentTransition(.symbolEffect(.replace))
             }
-            .padding(.vertical, 4)
+            .padding(14)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.04), radius: 3, y: 2)
         }
         .buttonStyle(.plain)
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                withAnimation {
+                    modelContext.delete(item)
+                    try? modelContext.save()
+                }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 
-    private func deleteItems(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(filteredItems[index])
+    private func sourceIcon(for label: String?) -> String {
+        switch label {
+        case "Scan": return "doc.text.viewfinder"
+        case "QR Scan": return "qrcode.viewfinder"
+        case "Batch": return "doc.on.doc"
+        case "History": return "clock"
+        case "Detection": return "sparkles"
+        case "Website": return "globe"
+        case "Card": return "person.crop.rectangle"
+        case "Receipt": return "receipt"
+        case "Note": return "note.text"
+        case "Table": return "tablecells"
+        default: return "doc.on.doc"
         }
-        try? modelContext.save()
     }
 }
