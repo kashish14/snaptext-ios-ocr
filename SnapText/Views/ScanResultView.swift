@@ -6,12 +6,18 @@ struct ScanResultView: View {
     let onDismiss: () -> Void
 
     @State private var showCopiedToast = false
+    @State private var showEntitySheet: DetectedEntity.EntityType?
+    @State private var showFullscreenImage = false
+
+    private func entitiesOfType(_ type: DetectedEntity.EntityType) -> [DetectedEntity] {
+        result.entities.filter { $0.type == type }
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Source image thumbnail
+                    // Source image thumbnail (tap to view fullscreen)
                     Image(uiImage: result.image)
                         .resizable()
                         .scaledToFit()
@@ -19,6 +25,16 @@ struct ScanResultView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .shadow(radius: 4)
                         .padding(.horizontal)
+                        .onTapGesture { showFullscreenImage = true }
+                        .overlay(alignment: .bottomTrailing) {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.caption)
+                                .padding(6)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Circle())
+                                .padding(.horizontal, 24)
+                                .padding(.bottom, 8)
+                        }
 
                     // Smart entities (OTPs first, then others)
                     if !result.entities.isEmpty {
@@ -46,10 +62,21 @@ struct ScanResultView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
+            .sheet(item: $showEntitySheet) { type in
+                EntityListSheet(title: sheetTitle(for: type), entities: entitiesOfType(type))
+                    .presentationDetents([.medium, .large])
+            }
+            .fullScreenCover(isPresented: $showFullscreenImage) {
+                FullscreenImageViewer(image: result.image)
+            }
         }
     }
 
     // MARK: - Smart Entities
+
+    private var entityCategories: [(type: DetectedEntity.EntityType, icon: String, label: String, color: Color, count: Int)] {
+        EntityCategoryHelper.categories(from: result.entities)
+    }
 
     private var smartEntitiesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -59,31 +86,26 @@ struct ScanResultView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    ForEach(result.entities) { entity in
-                        entityChip(entity)
+                    ForEach(entityCategories, id: \.type) { category in
+                        Button {
+                            handleCategoryTap(category.type)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: category.icon)
+                                    .font(.caption)
+                                Text("\(category.count) \(category.label)")
+                                    .font(.caption.weight(.medium))
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(category.color)
+                            .foregroundStyle(.white)
+                            .clipShape(Capsule())
+                        }
                     }
                 }
                 .padding(.horizontal)
             }
-        }
-    }
-
-    private func entityChip(_ entity: DetectedEntity) -> some View {
-        Button {
-            handleEntityTap(entity)
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: entity.iconName)
-                    .font(.caption)
-                Text(entity.actionLabel)
-                    .font(.caption)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(entity.type == .otp ? Color.orange : Color.accentColor)
-            .foregroundStyle(.white)
-            .clipShape(Capsule())
         }
     }
 
@@ -95,11 +117,9 @@ struct ScanResultView: View {
                 .font(.headline)
                 .padding(.horizontal)
 
-            Text(result.text)
-                .font(.body)
-                .textSelection(.enabled)
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
+            SelectableTextView(text: result.text)
+                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: false, vertical: true)
                 .background(Color(.secondarySystemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .padding(.horizontal)
@@ -109,25 +129,27 @@ struct ScanResultView: View {
     // MARK: - Actions
 
     private var actionButtons: some View {
-        HStack(spacing: 16) {
-            // Copy All
-            Button {
-                onCopy(result.text)
-                showCopiedFeedback()
-            } label: {
-                Label("Copy All", systemImage: "doc.on.doc.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+        VStack(spacing: 12) {
+            HStack(spacing: 16) {
+                Button {
+                    onCopy(result.text)
+                    showCopiedFeedback()
+                } label: {
+                    Label("Copy All", systemImage: "doc.on.doc.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
 
-            // Share
-            ShareLink(item: result.text) {
-                Label("Share", systemImage: "square.and.arrow.up")
-                    .frame(maxWidth: .infinity)
+                ShareLink(item: result.text) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+
+            TranslateButton(text: result.text)
         }
         .padding(.horizontal)
     }
@@ -165,28 +187,11 @@ struct ScanResultView: View {
         }
     }
 
-    private func handleEntityTap(_ entity: DetectedEntity) {
-        switch entity.type {
-        case .otp:
-            onCopy(entity.value)
-            showCopiedFeedback()
-        case .phoneNumber:
-            if let url = URL(string: "tel:\(entity.value.filter { $0.isNumber || $0 == "+" })") {
-                UIApplication.shared.open(url)
-            }
-        case .url:
-            if let url = URL(string: entity.value) {
-                UIApplication.shared.open(url)
-            }
-        case .email:
-            if let url = URL(string: "mailto:\(entity.value)") {
-                UIApplication.shared.open(url)
-            }
-        case .address:
-            let query = entity.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-            if let url = URL(string: "maps://?q=\(query)") {
-                UIApplication.shared.open(url)
-            }
-        }
+    private func handleCategoryTap(_ type: DetectedEntity.EntityType) {
+        showEntitySheet = type
+    }
+
+    private func sheetTitle(for type: DetectedEntity.EntityType) -> String {
+        EntityCategoryHelper.sheetTitle(for: type)
     }
 }

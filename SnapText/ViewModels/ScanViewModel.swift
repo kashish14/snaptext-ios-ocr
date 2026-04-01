@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import UIKit
 
 @Observable
@@ -14,27 +15,7 @@ final class ScanViewModel {
     var showCamera = false
     var showGallery = false
 
-    // History of scans in this session (SwiftData persistence comes in Sprint 4)
-    var scanHistory: [ScanResult] = []
-
-    // MARK: - Free tier tracking
-
-    private let dailyScanLimitKey = "dailyScanCount"
-    private let dailyScanDateKey = "dailyScanDate"
-    private let freeScanLimit = 15
-
-    var scansUsedToday: Int {
-        resetCountIfNewDay()
-        return UserDefaults.standard.integer(forKey: dailyScanLimitKey)
-    }
-
-    var scansRemaining: Int {
-        max(0, freeScanLimit - scansUsedToday)
-    }
-
-    var hasReachedLimit: Bool {
-        scansUsedToday >= freeScanLimit
-    }
+    var modelContext: ModelContext?
 
     // MARK: - Services
 
@@ -44,11 +25,6 @@ final class ScanViewModel {
     // MARK: - Actions
 
     func processImage(_ image: UIImage) async {
-        guard !hasReachedLimit else {
-            errorMessage = "You've used all \(freeScanLimit) free scans today. Come back tomorrow or go Pro!"
-            return
-        }
-
         isProcessing = true
         errorMessage = nil
 
@@ -58,8 +34,7 @@ final class ScanViewModel {
             let result = ScanResult(image: image, text: text, entities: entities)
 
             scanResult = result
-            scanHistory.insert(result, at: 0)
-            incrementScanCount()
+            saveToHistory(result)
         } catch let error as OCRService.OCRError {
             errorMessage = error.errorDescription
         } catch {
@@ -70,7 +45,7 @@ final class ScanViewModel {
     }
 
     func copyToClipboard(_ text: String) {
-        UIPasteboard.general.string = text
+        ClipboardManager.shared.copy(text, source: "Scan")
     }
 
     func clearResult() {
@@ -78,27 +53,17 @@ final class ScanViewModel {
         errorMessage = nil
     }
 
-    // MARK: - Scan counting
+    // MARK: - History persistence
 
-    private func incrementScanCount() {
-        resetCountIfNewDay()
-        let current = UserDefaults.standard.integer(forKey: dailyScanLimitKey)
-        UserDefaults.standard.set(current + 1, forKey: dailyScanLimitKey)
-    }
-
-    private func resetCountIfNewDay() {
-        let storedDate = UserDefaults.standard.string(forKey: dailyScanDateKey) ?? ""
-        let today = Self.todayString()
-
-        if storedDate != today {
-            UserDefaults.standard.set(0, forKey: dailyScanLimitKey)
-            UserDefaults.standard.set(today, forKey: dailyScanDateKey)
-        }
-    }
-
-    private static func todayString() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
+    private func saveToHistory(_ result: ScanResult) {
+        guard let modelContext else { return }
+        let item = ScanHistoryItem(
+            text: result.text,
+            image: result.image,
+            entities: result.entities,
+            timestamp: result.timestamp
+        )
+        modelContext.insert(item)
+        try? modelContext.save()
     }
 }

@@ -27,10 +27,6 @@ final class OCRService {
     }
 
     /// Extracts text from a UIImage using Apple Vision.
-    /// - Parameters:
-    ///   - image: The source image.
-    ///   - mode: `.fast` for share extension speed, `.accurate` for main app quality.
-    /// - Returns: The recognized text as a single string.
     nonisolated func recognizeText(
         in image: UIImage,
         mode: RecognitionMode = .accurate
@@ -39,7 +35,8 @@ final class OCRService {
             throw OCRError.imageConversionFailed
         }
 
-        let downscaled = Self.downscaleIfNeeded(cgImage, maxDimension: 2048)
+        // Higher resolution limit — 4096 preserves small text while staying in memory budget
+        let downscaled = Self.downscaleIfNeeded(cgImage, maxDimension: 4096)
 
         return try await withCheckedThrowingContinuation { continuation in
             let request = VNRecognizeTextRequest { request, error in
@@ -54,7 +51,18 @@ final class OCRService {
                     return
                 }
 
-                let text = observations
+                // Sort observations top-to-bottom, left-to-right for proper reading order
+                let sorted = observations.sorted { a, b in
+                    let ay = 1 - a.boundingBox.origin.y  // Vision uses bottom-left origin
+                    let by = 1 - b.boundingBox.origin.y
+                    if abs(ay - by) < 0.01 {
+                        // Same line — sort left to right
+                        return a.boundingBox.origin.x < b.boundingBox.origin.x
+                    }
+                    return ay < by
+                }
+
+                let text = sorted
                     .compactMap { $0.topCandidates(1).first?.string }
                     .joined(separator: "\n")
 
@@ -65,8 +73,58 @@ final class OCRService {
                 }
             }
 
+            // Maximum accuracy settings
             request.recognitionLevel = (mode == .fast) ? .fast : .accurate
-            request.usesLanguageCorrection = (mode == .accurate)
+            request.usesLanguageCorrection = true
+            // Recognize all supported languages for better coverage
+            request.automaticallyDetectsLanguage = true
+            // Lower minimum text height to catch small text (default is ~1/32 of image)
+            request.minimumTextHeight = 0.005
+
+            let handler = VNImageRequestHandler(cgImage: downscaled, options: [:])
+            do {
+                try handler.perform([request])
+            } catch {
+                continuation.resume(throwing: OCRError.recognitionFailed(error))
+            }
+        }
+    }
+
+    /// Extracts text with bounding box positions for spatial analysis.
+    nonisolated func recognizeTextWithPositions(
+        in image: UIImage
+    ) async throws -> [(text: String, boundingBox: CGRect)] {
+        guard let cgImage = image.cgImage else {
+            throw OCRError.imageConversionFailed
+        }
+
+        let downscaled = Self.downscaleIfNeeded(cgImage, maxDimension: 4096)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let request = VNRecognizeTextRequest { request, error in
+                if let error {
+                    continuation.resume(throwing: OCRError.recognitionFailed(error))
+                    return
+                }
+
+                guard let observations = request.results as? [VNRecognizedTextObservation],
+                      !observations.isEmpty else {
+                    continuation.resume(throwing: OCRError.noTextFound)
+                    return
+                }
+
+                let results = observations.compactMap { obs -> (String, CGRect)? in
+                    guard let text = obs.topCandidates(1).first?.string else { return nil }
+                    return (text, obs.boundingBox)
+                }
+
+                continuation.resume(returning: results)
+            }
+
+            request.recognitionLevel = .accurate
+            request.usesLanguageCorrection = true
+            request.automaticallyDetectsLanguage = true
+            request.minimumTextHeight = 0.005
 
             let handler = VNImageRequestHandler(cgImage: downscaled, options: [:])
             do {
@@ -78,7 +136,6 @@ final class OCRService {
     }
 
     /// Downscales a CGImage if its largest dimension exceeds maxDimension.
-    /// Keeps the Share Extension within the 120MB memory limit.
     nonisolated private static func downscaleIfNeeded(
         _ image: CGImage,
         maxDimension: Int

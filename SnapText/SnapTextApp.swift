@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct SnapTextApp: App {
@@ -13,5 +14,6 @@ struct SnapTextApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [ScanHistoryItem.self, ClipboardItem.self])
     }
 }
