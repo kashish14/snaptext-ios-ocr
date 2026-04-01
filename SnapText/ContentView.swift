@@ -1,21 +1,16 @@
-//
-//  ContentView.swift
-//  SnapText
-//
-//  Created by Kashish Agarwal on 01/04/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView {
+            Tab("Scan", systemImage: "doc.text.viewfinder") {
+                ScanView()
+            }
+
+            Tab("History", systemImage: "clock") {
+                HistoryView()
+            }
         }
-        .padding()
     }
 }
 
