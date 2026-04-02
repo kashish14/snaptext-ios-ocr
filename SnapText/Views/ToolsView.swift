@@ -18,7 +18,6 @@ struct ToolsView: View {
                     // Smart Scanners
                     toolSection("Smart Scanners", icon: "sparkle.magnifyingglass") {
                         toolGrid([
-                            ToolItem(title: "Business Card", icon: "person.crop.rectangle.stack.fill", color: .indigo, destination: AnyView(BusinessCardScannerView())),
                             ToolItem(title: "Receipt", icon: "receipt", color: .mint, destination: AnyView(ReceiptScannerView())),
                             ToolItem(title: "Table / CSV", icon: "tablecells", color: .cyan, destination: AnyView(TableExtractorView())),
                             ToolItem(title: "Website URL", icon: "globe", color: .orange, destination: AnyView(WebsiteDetectionView())),
@@ -59,7 +58,7 @@ struct ToolsView: View {
 
                     // Footer
                     VStack(spacing: 6) {
-                        Text("21 tools \u{2022} 20+ auto-detections")
+                        Text("20 tools \u{2022} 20+ auto-detections")
                             .font(.caption.bold())
                             .foregroundStyle(.secondary)
                         Text("OTP \u{2022} Phone \u{2022} Email \u{2022} Address \u{2022} URL \u{2022} Date \u{2022} UPI \u{2022} Tracking \u{2022} WiFi \u{2022} Flight \u{2022} PAN \u{2022} Aadhaar \u{2022} GST \u{2022} IFSC \u{2022} Coordinates \u{2022} & more")

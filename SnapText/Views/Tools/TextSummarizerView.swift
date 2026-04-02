@@ -104,23 +104,39 @@ struct TextSummarizerView: View {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
-        // Extractive summarization: score sentences by word frequency
-        let sentences = splitSentences(text)
+        // Split into sentences using multiple strategies
+        var sentences = splitSentences(text)
+
+        // If linguistic splitting found very few sentences, fall back to line-based splitting
+        if sentences.count <= 2 {
+            let lineBased = text.components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            if lineBased.count > sentences.count {
+                sentences = lineBased
+            }
+        }
+
+        // If still too few units to summarize, return as-is
         guard sentences.count > 2 else {
             summary = text
             return
         }
 
-        // Word frequency
-        let words = text.lowercased()
+        // Word frequency (skip short/common words)
+        let allWords = text.lowercased()
             .components(separatedBy: .alphanumerics.inverted)
-            .filter { $0.count > 3 }
-        let stopWords: Set<String> = ["that", "this", "with", "from", "your", "have", "been",
-                                       "will", "would", "could", "should", "their", "there",
-                                       "were", "what", "when", "which", "about", "also", "them",
-                                       "than", "then", "some", "each", "into", "more", "other"]
+            .filter { $0.count > 2 }
+        let stopWords: Set<String> = [
+            "the", "and", "for", "are", "but", "not", "you", "all", "can", "has", "her",
+            "was", "one", "our", "out", "his", "its", "let", "say", "she", "too", "use",
+            "that", "this", "with", "from", "your", "have", "been", "will", "would",
+            "could", "should", "their", "there", "were", "what", "when", "which",
+            "about", "also", "them", "than", "then", "some", "each", "into", "more",
+            "other", "does", "done", "just", "very", "much", "such", "like", "only",
+        ]
         var freq: [String: Int] = [:]
-        for w in words where !stopWords.contains(w) {
+        for w in allWords where !stopWords.contains(w) {
             freq[w, default: 0] += 1
         }
 
@@ -128,16 +144,19 @@ struct TextSummarizerView: View {
         let scored = sentences.enumerated().map { index, sentence -> (Int, String, Double) in
             let sentWords = sentence.lowercased()
                 .components(separatedBy: .alphanumerics.inverted)
-                .filter { $0.count > 3 }
+                .filter { $0.count > 2 && !stopWords.contains($0) }
+            guard !sentWords.isEmpty else { return (index, sentence, 0.0) }
             let score = sentWords.reduce(0.0) { $0 + Double(freq[$1] ?? 0) }
-            let normalized = sentWords.isEmpty ? 0 : score / Double(sentWords.count)
-            // Slight boost for first/second sentence (usually important)
-            let positionBoost = index < 2 ? 1.2 : 1.0
-            return (index, sentence, normalized * positionBoost)
+            let normalized = score / Double(sentWords.count)
+            // Boost first few sentences (usually contain key info)
+            let positionBoost: Double = index < 2 ? 1.3 : (index < 4 ? 1.1 : 1.0)
+            // Boost longer sentences (more informative)
+            let lengthBoost: Double = sentWords.count >= 5 ? 1.1 : 1.0
+            return (index, sentence, normalized * positionBoost * lengthBoost)
         }
 
-        // Pick top ~30% sentences, maintain original order
-        let count = max(1, sentences.count / 3)
+        // Pick top ~30-40% sentences (at least 2), maintain original order
+        let count = max(2, Int(ceil(Double(sentences.count) * 0.35)))
         let topIndices = Set(scored.sorted { $0.2 > $1.2 }.prefix(count).map { $0.0 })
         let result = scored.filter { topIndices.contains($0.0) }.map { $0.1 }
 
@@ -150,6 +169,13 @@ struct TextSummarizerView: View {
             if let s = sub?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty {
                 sentences.append(s)
             }
+        }
+        // If enumerateSubstrings found nothing, try regex-based splitting
+        if sentences.isEmpty {
+            let pattern = text.components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            sentences = pattern
         }
         return sentences
     }

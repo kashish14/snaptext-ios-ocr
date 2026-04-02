@@ -22,20 +22,13 @@ struct WordCounterView: View {
         let paragraphs = trimmed.components(separatedBy: "\n\n").filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
         let lines = trimmed.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
 
-        // Reading time: average 200 wpm
-        let readMins = max(1, Int(ceil(Double(words) / 200.0)))
-        // Speaking time: average 130 wpm
-        let speakMins = max(1, Int(ceil(Double(words) / 130.0)))
-
         return [
             ("Characters", "\(chars)", "character.cursor.ibeam"),
-            ("Characters (no spaces)", "\(charsNoSpaces)", "textformat.abc"),
+            ("No Spaces", "\(charsNoSpaces)", "textformat.abc"),
             ("Words", "\(words)", "text.word.spacing"),
             ("Sentences", "\(sentences)", "text.alignleft"),
             ("Paragraphs", "\(paragraphs)", "paragraphsign"),
             ("Lines", "\(lines)", "list.bullet"),
-            ("Reading Time", "\(readMins) min", "book.fill"),
-            ("Speaking Time", "\(speakMins) min", "mic.fill"),
         ]
     }
 
