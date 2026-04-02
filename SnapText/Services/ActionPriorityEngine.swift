@@ -167,18 +167,20 @@ final class ActionPriorityEngine {
                 ))
             case .trackingNumber:
                 let trackNum = entity.value
+                let courierName = entity.secondaryValue ?? ""
+                let trackTitle = courierName.isEmpty ? "Track \(trackNum)" : "Track on \(courierName)"
                 actions.append(QuickAction(
                     id: "entity_tracking",
-                    title: "Track \(trackNum)",
+                    title: trackTitle,
                     icon: "shippingbox.fill",
                     color: .indigo,
                     score: 95,
                     category: .utility,
                     toolDestination: nil,
                     directAction: {
-                        let encoded = trackNum.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trackNum
-                        if let url = URL(string: "https://parcelsapp.com/en/tracking/\(encoded)") {
-                            UIApplication.shared.open(url)
+                        let url = Self.trackingURL(number: trackNum, courier: courierName)
+                        if let trackURL = URL(string: url) {
+                            UIApplication.shared.open(trackURL)
                         }
                     }
                 ))
@@ -216,6 +218,30 @@ final class ActionPriorityEngine {
         }
 
         return actions
+    }
+
+    // MARK: - Tracking URL
+
+    private static func trackingURL(number: String, courier: String) -> String {
+        let encoded = number.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? number
+        let lc = courier.lowercased()
+        let map: [(key: String, url: String)] = [
+            ("blue dart",    "https://www.bluedart.com/tracking?handler=tref&numbers=\(encoded)"),
+            ("delhivery",    "https://www.delhivery.com/track/package/\(encoded)"),
+            ("dtdc",         "https://www.dtdc.in/tracking.asp?strCnno=\(encoded)"),
+            ("fedex",        "https://www.fedex.com/fedextrack/?trknbr=\(encoded)"),
+            ("dhl",          "https://www.dhl.com/en/express/tracking.html?AWB=\(encoded)"),
+            ("ekart",        "https://ekartlogistics.com/track/\(encoded)"),
+            ("xpressbees",   "https://www.xpressbees.com/track?awbNo=\(encoded)"),
+            ("india post",   "https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx?id=\(encoded)"),
+        ]
+        for item in map {
+            if lc.contains(item.key) { return item.url }
+        }
+        if number.hasPrefix("1Z") {
+            return "https://www.ups.com/track?tracknum=\(encoded)"
+        }
+        return "https://parcelsapp.com/en/tracking/\(encoded)"
     }
 
     // MARK: - Tool Actions with Base Scores

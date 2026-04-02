@@ -187,7 +187,7 @@ struct EntityListSheet: View {
 
         case .trackingNumber:
             openURLButton(
-                urlString: trackingURL(for: entity.value),
+                urlString: trackingURL(for: entity),
                 icon: "shippingbox.circle.fill",
                 color: .indigo
             )
@@ -273,35 +273,49 @@ struct EntityListSheet: View {
     private func secondaryLabel(for type: DetectedEntity.EntityType, value: String) -> String {
         switch type {
         case .wifi: return "Password: \(value)"
+        case .trackingNumber: return "Courier: \(value)"
         default: return value
         }
     }
 
-    private func trackingURL(for number: String) -> String {
+    private func trackingURL(for entity: DetectedEntity) -> String {
+        let number = entity.value
         let encoded = number.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? number
-        let digits = number.filter { $0.isNumber }
+        let courierName = entity.secondaryValue?.lowercased() ?? ""
 
-        // Blue Dart: 8-11 digit AWB
-        if digits.count >= 8 && digits.count <= 11 {
-            return "https://www.bluedart.com/tracking?handler=tref&numbers=\(encoded)"
+        // Use detected courier name for precise URL
+        let courierURLs: [(key: String, url: String)] = [
+            ("blue dart",    "https://www.bluedart.com/tracking?handler=tref&numbers=\(encoded)"),
+            ("delhivery",    "https://www.delhivery.com/track/package/\(encoded)"),
+            ("dtdc",         "https://www.dtdc.in/tracking.asp?strCnno=\(encoded)"),
+            ("fedex",        "https://www.fedex.com/fedextrack/?trknbr=\(encoded)"),
+            ("dhl",          "https://www.dhl.com/en/express/tracking.html?AWB=\(encoded)"),
+            ("ekart",        "https://ekartlogistics.com/track/\(encoded)"),
+            ("xpressbees",   "https://www.xpressbees.com/track?awbNo=\(encoded)"),
+            ("india post",   "https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx?id=\(encoded)"),
+            ("ecom express", "https://ecomexpress.in/tracking/?awb_field=\(encoded)"),
+            ("shadowfax",    "https://tracker.shadowfax.in/#/search?tracking_id=\(encoded)"),
+        ]
+
+        for courier in courierURLs {
+            if courierName.contains(courier.key) {
+                return courier.url
+            }
         }
-        // Delhivery: 12-14 digits
-        if digits.count >= 12 && digits.count <= 14 {
-            return "https://www.delhivery.com/track/package/\(encoded)"
-        }
-        // India Post: EE123456789IN format
-        if number.count == 13, number.hasPrefix("E") || number.hasPrefix("R") || number.hasPrefix("C") {
-            return "https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx?id=\(encoded)"
-        }
-        // UPS: 1Z format
+
+        // Fallback: detect from number format
         if number.hasPrefix("1Z") {
             return "https://www.ups.com/track?tracknum=\(encoded)"
         }
-        // FedEx: 20-22 digits
+        let digits = number.filter { $0.isNumber }
+        if number.count == 13, number.first?.isLetter == true, number.suffix(2).allSatisfy({ $0.isLetter }) {
+            return "https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx?id=\(encoded)"
+        }
         if digits.count >= 20 {
             return "https://www.fedex.com/fedextrack/?trknbr=\(encoded)"
         }
-        // Default: use a universal tracker
+
+        // Universal fallback
         return "https://parcelsapp.com/en/tracking/\(encoded)"
     }
 

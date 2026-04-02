@@ -11,6 +11,9 @@ struct IntelligentResultView: View {
     @State private var showFullscreenImage = false
     @State private var showToolView: AnyView?
     @State private var showToolSheet = false
+    @State private var showBillSplit = false
+    @State private var billSplitCount = 2
+    @State private var billManualAmount = ""
 
     private let engine = ActionPriorityEngine()
 
@@ -31,6 +34,11 @@ struct IntelligentResultView: View {
 
                         // B. Extracted — clean text
                         extractedTextSection
+
+                        // B2. Bill Split — when amounts detected
+                        if hasCurrencyOrAmounts {
+                            billSplitSection
+                        }
 
                         // C. Quick Actions — top 3–5 scored
                         if let ranked = rankedResult, !ranked.quickActions.isEmpty {
@@ -430,6 +438,144 @@ struct IntelligentResultView: View {
         withAnimation(.spring(duration: 0.3)) { showCopiedToast = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation(.spring(duration: 0.3)) { showCopiedToast = false }
+        }
+    }
+
+    // MARK: - Bill Split
+
+    private var hasCurrencyOrAmounts: Bool {
+        result.entities.contains(where: { $0.type == .currency }) ||
+        result.text.lowercased().contains("total") ||
+        result.text.lowercased().contains("amount") ||
+        result.text.contains("₹") || result.text.contains("$") ||
+        result.text.lowercased().contains("rs")
+    }
+
+    private var detectedTotal: Double {
+        // Try to find the largest currency entity value
+        let currencyEntities = result.entities.filter { $0.type == .currency }
+        var largest: Double = 0
+        for entity in currencyEntities {
+            let cleaned = entity.value.replacingOccurrences(of: ",", with: "")
+            let pattern = try! NSRegularExpression(pattern: #"[\d]+\.?\d{0,2}"#)
+            let range = NSRange(cleaned.startIndex..., in: cleaned)
+            if let match = pattern.matches(in: cleaned, range: range).last,
+               let r = Range(match.range, in: cleaned),
+               let num = Double(cleaned[r]) {
+                if num > largest { largest = num }
+            }
+        }
+        return largest
+    }
+
+    private var billSplitAmount: Double {
+        let detected = detectedTotal
+        if detected > 0 { return detected }
+        return Double(billManualAmount) ?? 0
+    }
+
+    private var billSplitSection: some View {
+        VStack(spacing: 10) {
+            Button {
+                withAnimation { showBillSplit.toggle() }
+            } label: {
+                HStack {
+                    Image(systemName: "person.2.fill")
+                        .foregroundStyle(.blue)
+                    Text("Split Bill")
+                        .font(.headline)
+                    Spacer()
+                    Image(systemName: showBillSplit ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal)
+            }
+            .buttonStyle(.plain)
+
+            if showBillSplit {
+                VStack(spacing: 12) {
+                    if detectedTotal > 0 {
+                        HStack {
+                            Text("Detected Total")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(String(format: "₹%.2f", detectedTotal))
+                                .font(.headline.bold())
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Enter Total Amount")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("e.g. 1250.00", text: $billManualAmount)
+                                .keyboardType(.decimalPad)
+                                .padding(10)
+                                .background(Color(.tertiarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                    }
+
+                    HStack(spacing: 16) {
+                        Text("People")
+                            .font(.subheadline)
+                        Spacer()
+                        HStack(spacing: 0) {
+                            Button {
+                                if billSplitCount > 2 { billSplitCount -= 1 }
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(billSplitCount > 2 ? .blue : .gray)
+                            }
+                            .disabled(billSplitCount <= 2)
+
+                            Text("\(billSplitCount)")
+                                .font(.title3.bold().monospaced())
+                                .frame(width: 44)
+
+                            Button {
+                                if billSplitCount < 20 { billSplitCount += 1 }
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    }
+
+                    if billSplitAmount > 0 {
+                        Divider()
+
+                        HStack {
+                            Text("Per person")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(String(format: "₹%.2f", billSplitAmount / Double(billSplitCount)))
+                                .font(.title2.bold())
+                                .foregroundStyle(.green)
+                        }
+
+                        Button {
+                            let text = "Bill split: ₹\(String(format: "%.2f", billSplitAmount)) ÷ \(billSplitCount) = ₹\(String(format: "%.2f", billSplitAmount / Double(billSplitCount))) per person"
+                            ClipboardManager.shared.copy(text, source: "Bill Split")
+                            showCopiedFeedback()
+                        } label: {
+                            Label("Copy Split", systemImage: "doc.on.doc")
+                                .font(.caption.weight(.medium))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+                .padding()
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal)
+            }
         }
     }
 

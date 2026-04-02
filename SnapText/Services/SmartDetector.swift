@@ -465,9 +465,36 @@ final class SmartDetector {
         return merged.filter { seen.insert($0.value).inserted }
     }
 
+    /// Courier name → tracking URL mapping
+    private static let courierURLs: [(keywords: [String], name: String, urlTemplate: String)] = [
+        (["bluedart", "blue dart"],      "Blue Dart",   "https://www.bluedart.com/tracking?handler=tref&numbers={NUM}"),
+        (["delhivery"],                   "Delhivery",   "https://www.delhivery.com/track/package/{NUM}"),
+        (["dtdc"],                        "DTDC",        "https://www.dtdc.in/tracking.asp?strCnno={NUM}"),
+        (["fedex"],                       "FedEx",       "https://www.fedex.com/fedextrack/?trknbr={NUM}"),
+        (["dhl"],                         "DHL",         "https://www.dhl.com/en/express/tracking.html?AWB={NUM}"),
+        (["ekart"],                       "Ekart",       "https://ekartlogistics.com/track/{NUM}"),
+        (["xpressbees"],                  "XpressBees",  "https://www.xpressbees.com/track?awbNo={NUM}"),
+        (["india post", "speed post"],    "India Post",  "https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx?id={NUM}"),
+        (["ecom express"],                "Ecom Express","https://ecomexpress.in/tracking/?awb_field={NUM}"),
+        (["shadowfax"],                   "Shadowfax",   "https://tracker.shadowfax.in/#/search?tracking_id={NUM}"),
+    ]
+
+    /// Detect the courier name from the full scanned text
+    private func detectCourier(lowered: String) -> (name: String, urlTemplate: String)? {
+        for courier in Self.courierURLs {
+            if courier.keywords.contains(where: { lowered.contains($0) }) {
+                return (courier.name, courier.urlTemplate)
+            }
+        }
+        return nil
+    }
+
     private func detectTracking(in text: String, lowered: String) -> [DetectedEntity] {
         var results: [DetectedEntity] = []
         var detectedValues = Set<String>()
+
+        // Detect which courier this is from text context
+        let courier = detectCourier(lowered: lowered)
 
         // Collect phone numbers to exclude from tracking (avoid false positives)
         var phoneNumbers = Set<String>()
@@ -475,20 +502,22 @@ final class SmartDetector {
             phoneNumbers.insert(phone.filter { $0.isNumber })
         }
 
-        // Helper: skip values that look like phone numbers, pin codes, or dates
         func isValidTracking(_ val: String) -> Bool {
             let digits = val.filter { $0.isNumber }
-            // Skip 6-digit values (likely pin codes)
             if digits.count == 6, val.allSatisfy({ $0.isNumber || $0 == " " }) { return false }
-            // Skip if it matches a detected phone number
             if phoneNumbers.contains(digits) { return false }
             return true
+        }
+
+        func addTracking(_ value: String) {
+            // secondaryValue = courier name (e.g. "Blue Dart") or nil
+            results.append(DetectedEntity(type: .trackingNumber, value: value, secondaryValue: courier?.name))
         }
 
         // 1. Explicit tracking patterns (AWB:, TRK:, TRACKING:, etc.) — always match
         for match in regexGroupMatches(Self.trackingPattern, in: text, group: 1) {
             if detectedValues.insert(match).inserted && isValidTracking(match) {
-                results.append(DetectedEntity(type: .trackingNumber, value: match))
+                addTracking(match)
             }
         }
 
@@ -500,7 +529,7 @@ final class SmartDetector {
                 for match in regexMatches(pattern, in: text) {
                     let cleaned = match.replacingOccurrences(of: " ", with: "")
                     if detectedValues.insert(cleaned).inserted && isValidTracking(cleaned) {
-                        results.append(DetectedEntity(type: .trackingNumber, value: cleaned))
+                        addTracking(cleaned)
                     }
                 }
             }
@@ -509,7 +538,7 @@ final class SmartDetector {
             let genericPattern = try! NSRegularExpression(pattern: #"\b[A-Z0-9]{10,22}\b"#)
             for match in regexMatches(genericPattern, in: text) {
                 if detectedValues.insert(match).inserted && isValidTracking(match) {
-                    results.append(DetectedEntity(type: .trackingNumber, value: match))
+                    addTracking(match)
                 }
             }
         }
