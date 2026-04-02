@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TableExtractorView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var showCamera = false
     @State private var showGallery = false
     @State private var isProcessing = false
@@ -8,6 +9,7 @@ struct TableExtractorView: View {
     @State private var rawText = ""
     @State private var errorMessage: String?
     @State private var copied = false
+    @State private var didApplyContext = false
 
     private let ocrService = OCRService()
 
@@ -25,6 +27,21 @@ struct TableExtractorView: View {
         }
         .navigationTitle("Table Extractor")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let img = toolContext.image, img.size.width > 0 {
+                didApplyContext = true
+                Task { await extractTable(from: img) }
+            } else if !didApplyContext, let text = toolContext.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                didApplyContext = true
+                rawText = text
+                let rows = parseTable(from: text)
+                if rows.isEmpty {
+                    errorMessage = "No table structure detected."
+                } else {
+                    tableRows = rows
+                }
+            }
+        }
         .fullScreenCover(isPresented: $showCamera) {
             CameraView { image in
                 Task { await extractTable(from: image) }

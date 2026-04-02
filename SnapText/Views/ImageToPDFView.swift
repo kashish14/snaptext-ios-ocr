@@ -1,10 +1,12 @@
 import SwiftUI
 
 struct ImageToPDFView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var showPicker = false
     @State private var images: [UIImage] = []
     @State private var pdfData: Data?
     @State private var applyBW = false
+    @State private var didApplyContext = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -96,6 +98,12 @@ struct ImageToPDFView: View {
         }
         .navigationTitle("Image to PDF")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let img = toolContext.image, img.size.width > 0 {
+                didApplyContext = true
+                images = [img]
+            }
+        }
         .sheet(isPresented: $showPicker) {
             MultiImagePicker { selected in
                 images.append(contentsOf: selected)

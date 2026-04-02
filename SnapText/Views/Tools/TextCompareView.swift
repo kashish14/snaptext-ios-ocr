@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct TextCompareView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var textA = ""
     @State private var textB = ""
+    @State private var didApplyContext = false
     @State private var diffResult: [DiffLine] = []
     @State private var showResult = false
 
@@ -62,6 +64,12 @@ struct TextCompareView: View {
         }
         .navigationTitle("Compare Texts")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let text = toolContext.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                didApplyContext = true
+                textA = text
+            }
+        }
     }
 
     private var resultView: some View {

@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct WordCounterView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var inputText = ""
     @State private var showGallery = false
     @State private var isProcessing = false
+    @State private var didApplyContext = false
 
     private let ocrService = OCRService()
 
@@ -92,6 +94,12 @@ struct WordCounterView: View {
         }
         .navigationTitle("Word Counter")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let text = toolContext.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                didApplyContext = true
+                inputText = text
+            }
+        }
         .sheet(isPresented: $showGallery) {
             ImagePicker { image in
                 Task {

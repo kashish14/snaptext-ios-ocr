@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct PassportPhotoView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var showPicker = false
     @State private var selectedImage: UIImage?
+    @State private var didApplyContext = false
     @State private var croppedImage: UIImage?
     @State private var selectedPresetIndex = 0
     @State private var customWidth = ""
@@ -54,6 +56,12 @@ struct PassportPhotoView: View {
         }
         .navigationTitle("Passport Photo")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let img = toolContext.image, img.size.width > 0 {
+                didApplyContext = true
+                selectedImage = img
+            }
+        }
         .sheet(isPresented: $showPicker) {
             ImagePicker { image in
                 selectedImage = image

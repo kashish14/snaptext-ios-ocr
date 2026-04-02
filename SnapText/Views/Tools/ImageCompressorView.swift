@@ -1,10 +1,12 @@
 import SwiftUI
 
 struct ImageCompressorView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var showPicker = false
     @State private var originalImage: UIImage?
     @State private var quality: Double = 0.7
     @State private var compressedData: Data?
+    @State private var didApplyContext = false
 
     private var originalSize: String {
         guard let img = originalImage, let data = img.jpegData(compressionQuality: 1.0) else { return "" }
@@ -133,6 +135,13 @@ struct ImageCompressorView: View {
         }
         .navigationTitle("Image Compressor")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let img = toolContext.image, img.size.width > 0 {
+                didApplyContext = true
+                originalImage = img
+                compress()
+            }
+        }
         .sheet(isPresented: $showPicker) {
             ImagePicker { image in
                 originalImage = image

@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct ReceiptScannerView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var showCamera = false
     @State private var showGallery = false
     @State private var isProcessing = false
     @State private var receiptInfo: ReceiptInfo?
     @State private var errorMessage: String?
+    @State private var didApplyContext = false
 
     private let ocrService = OCRService()
 
@@ -19,6 +21,15 @@ struct ReceiptScannerView: View {
         }
         .navigationTitle("Receipt Scanner")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let img = toolContext.image, img.size.width > 0 {
+                didApplyContext = true
+                Task { await scanReceipt(img) }
+            } else if !didApplyContext, let text = toolContext.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                didApplyContext = true
+                receiptInfo = parseReceipt(text: text, image: nil)
+            }
+        }
         .fullScreenCover(isPresented: $showCamera) {
             CameraView { image in
                 Task { await scanReceipt(image) }
@@ -214,7 +225,7 @@ struct ReceiptScannerView: View {
         }
     }
 
-    private func parseReceipt(text: String, image: UIImage) -> ReceiptInfo {
+    private func parseReceipt(text: String, image: UIImage?) -> ReceiptInfo {
         let lines = text.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
         let lowered = text.lowercased()
 

@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct CodeFormatterView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var inputText = ""
     @State private var formattedText = ""
     @State private var selectedFormat = FormatType.json
     @State private var errorMessage: String?
     @State private var copied = false
+    @State private var didApplyContext = false
 
     enum FormatType: String, CaseIterable {
         case json = "JSON"
@@ -96,6 +98,12 @@ struct CodeFormatterView: View {
         }
         .navigationTitle("Code Formatter")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let text = toolContext.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                didApplyContext = true
+                inputText = text
+            }
+        }
     }
 
     private func format() {

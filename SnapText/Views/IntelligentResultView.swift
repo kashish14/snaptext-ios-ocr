@@ -74,6 +74,10 @@ struct IntelligentResultView: View {
                 if let toolView = showToolView {
                     NavigationStack {
                         toolView
+                            .environment(\.toolContext, ToolContext(
+                                image: result.image.size.width > 0 ? result.image : nil,
+                                text: result.text
+                            ))
                             .toolbar {
                                 ToolbarItem(placement: .topBarLeading) {
                                     Button("Close") { showToolSheet = false }

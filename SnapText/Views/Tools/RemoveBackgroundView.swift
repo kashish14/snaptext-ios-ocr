@@ -4,11 +4,13 @@ import CoreImage
 import CoreImage.CIFilterBuiltins
 
 struct RemoveBackgroundView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var showPicker = false
     @State private var originalImage: UIImage?
     @State private var resultImage: UIImage?
     @State private var isProcessing = false
     @State private var errorMessage: String?
+    @State private var didApplyContext = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -110,6 +112,13 @@ struct RemoveBackgroundView: View {
         }
         .navigationTitle("Remove Background")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let img = toolContext.image, img.size.width > 0 {
+                didApplyContext = true
+                originalImage = img
+                removeBackground(from: img)
+            }
+        }
         .sheet(isPresented: $showPicker) {
             ImagePicker { image in
                 originalImage = image

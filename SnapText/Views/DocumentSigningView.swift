@@ -2,8 +2,10 @@ import SwiftUI
 import PencilKit
 
 struct DocumentSigningView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var showPicker = false
     @State private var selectedImage: UIImage?
+    @State private var didApplyContext = false
     @State private var signatureImage: UIImage?
     @State private var showSignaturePad = false
     @State private var signaturePosition = CGSize.zero
@@ -22,6 +24,12 @@ struct DocumentSigningView: View {
         }
         .navigationTitle("Sign Document")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let img = toolContext.image, img.size.width > 0 {
+                didApplyContext = true
+                selectedImage = img
+            }
+        }
         .sheet(isPresented: $showPicker) {
             ImagePicker { image in
                 selectedImage = image

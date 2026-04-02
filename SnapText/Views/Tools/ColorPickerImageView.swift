@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct ColorPickerImageView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var showPicker = false
     @State private var selectedImage: UIImage?
+    @State private var didApplyContext = false
     @State private var pickedColor: Color?
     @State private var hexString = ""
     @State private var rgbString = ""
@@ -143,6 +145,12 @@ struct ColorPickerImageView: View {
         }
         .navigationTitle("Color Picker")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let img = toolContext.image, img.size.width > 0 {
+                didApplyContext = true
+                selectedImage = img
+            }
+        }
         .sheet(isPresented: $showPicker) {
             ImagePicker { image in
                 selectedImage = image

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NotesFromScanView: View {
+    @Environment(\.toolContext) private var toolContext
     @State private var showCamera = false
     @State private var showGallery = false
     @State private var isProcessing = false
@@ -8,6 +9,7 @@ struct NotesFromScanView: View {
     @State private var noteTitle = ""
     @State private var isSaved = false
     @State private var errorMessage: String?
+    @State private var didApplyContext = false
 
     private let ocrService = OCRService()
 
@@ -141,6 +143,13 @@ struct NotesFromScanView: View {
         }
         .navigationTitle("Notes from Scan")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if !didApplyContext, let text = toolContext.text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                didApplyContext = true
+                noteText = cleanupText(text)
+                noteTitle = generateTitle(from: noteText)
+            }
+        }
         .fullScreenCover(isPresented: $showCamera) {
             CameraView { image in
                 Task { await processImage(image) }

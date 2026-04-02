@@ -5,6 +5,7 @@ struct CaptureView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel = ScanViewModel()
     @State private var showPasteAlert = false
+    @State private var showDirectTool: DirectTool?
     @Query(sort: \ScanHistoryItem.timestamp, order: .reverse, animation: .default)
     private var recentScans: [ScanHistoryItem]
 
@@ -14,32 +15,32 @@ struct CaptureView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Background gradient
-                LinearGradient(
-                    colors: [Color(.systemBackground), Color.blue.opacity(0.04)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-
-                VStack(spacing: 0) {
-                    Spacer()
-
+            ScrollView {
+                VStack(spacing: 20) {
                     // Hero
                     heroSection
 
-                    Spacer()
-
                     // Capture buttons
                     captureButtons
+
+                    // Quick tools (no scan needed)
+                    quickToolsSection
 
                     // Recent scans strip
                     if !lastThreeScans.isEmpty {
                         recentStrip
                     }
                 }
+                .padding(.bottom, 16)
             }
+            .background(
+                LinearGradient(
+                    colors: [Color(.systemBackground), Color.blue.opacity(0.04)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
             .navigationTitle("SnapText")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
@@ -62,6 +63,16 @@ struct CaptureView: View {
                     onDismiss: { viewModel.clearResult() }
                 )
             }
+            .sheet(item: $showDirectTool) { tool in
+                NavigationStack {
+                    tool.view
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Close") { showDirectTool = nil }
+                            }
+                        }
+                }
+            }
             .alert("Paste Text", isPresented: $showPasteAlert) {
                 Button("Cancel", role: .cancel) {}
             } message: {
@@ -73,30 +84,30 @@ struct CaptureView: View {
     // MARK: - Hero
 
     private var heroSection: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             ZStack {
                 Circle()
                     .fill(Color.blue.opacity(0.08))
-                    .frame(width: 140, height: 140)
+                    .frame(width: 110, height: 110)
 
                 Circle()
                     .fill(Color.blue.opacity(0.04))
-                    .frame(width: 180, height: 180)
+                    .frame(width: 145, height: 145)
 
                 Image(systemName: "viewfinder")
-                    .font(.system(size: 56, weight: .light))
+                    .font(.system(size: 48, weight: .light))
                     .foregroundStyle(
                         LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing)
                     )
                     .symbolEffect(.pulse, options: .repeating.speed(0.5))
             }
 
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Text("Capture Anything")
-                    .font(.title2.bold())
+                    .font(.title3.bold())
 
                 Text("Photo \u{2192} Understand \u{2192} Act")
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
@@ -125,21 +136,21 @@ struct CaptureView: View {
                     .padding(.horizontal)
             }
         }
+        .padding(.top, 16)
     }
 
     // MARK: - Capture Buttons
 
     private var captureButtons: some View {
-        VStack(spacing: 12) {
-            // Primary row: Camera + Gallery
-            HStack(spacing: 14) {
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Button {
                     viewModel.showCamera = true
                 } label: {
                     Label("Camera", systemImage: "camera.fill")
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 14)
                 }
                 .buttonStyle(.borderedProminent)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -150,27 +161,120 @@ struct CaptureView: View {
                     Label("Gallery", systemImage: "photo.on.rectangle")
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 14)
                 }
                 .buttonStyle(.bordered)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
 
-            // Paste from clipboard
             Button {
                 handlePaste()
             } label: {
                 Label("Paste from Clipboard", systemImage: "clipboard")
                     .font(.subheadline.weight(.medium))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+                    .padding(.vertical, 10)
             }
             .buttonStyle(.bordered)
             .tint(.secondary)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 16)
+    }
+
+    // MARK: - Quick Tools (no scan required)
+
+    private var quickToolsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Quick Tools")
+                .font(.headline)
+                .padding(.horizontal, 24)
+
+            // Image tools row
+            VStack(alignment: .leading, spacing: 8) {
+                toolCategoryLabel("Image", icon: "photo", color: .blue)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        directToolChip("Remove BG", icon: "person.and.background.strikethrough", color: .pink, tool: .removeBG)
+                        directToolChip("Compress", icon: "arrow.down.right.and.arrow.up.left", color: .blue, tool: .compress)
+                        directToolChip("Passport", icon: "person.crop.rectangle", color: .purple, tool: .passport)
+                        directToolChip("Color Pick", icon: "eyedropper", color: .pink, tool: .colorPicker)
+                        directToolChip("To PDF", icon: "doc.fill", color: .red, tool: .imageToPDF)
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+
+            // Text tools row
+            VStack(alignment: .leading, spacing: 8) {
+                toolCategoryLabel("Text", icon: "textformat", color: .green)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        directToolChip("Word Count", icon: "number", color: .blue, tool: .wordCounter)
+                        directToolChip("Summarize", icon: "text.badge.checkmark", color: .green, tool: .summarizer)
+                        directToolChip("Compare", icon: "doc.text.magnifyingglass", color: .orange, tool: .compare)
+                        directToolChip("JSON", icon: "curlybraces", color: .purple, tool: .jsonFormatter)
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+
+            // Scan & Utility row
+            VStack(alignment: .leading, spacing: 8) {
+                toolCategoryLabel("Scan & More", icon: "viewfinder", color: .orange)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        directToolChip("QR Code", icon: "qrcode.viewfinder", color: .purple, tool: .qrScanner)
+                        directToolChip("Document", icon: "doc.viewfinder", color: .teal, tool: .docScanner)
+                        directToolChip("Batch", icon: "doc.on.doc", color: .orange, tool: .batchScan)
+                        directToolChip("Sign Doc", icon: "signature", color: .green, tool: .signDocument)
+                        directToolChip("Units", icon: "arrow.left.arrow.right", color: .teal, tool: .unitConverter)
+                        directToolChip("Ruler", icon: "ruler", color: .brown, tool: .ruler)
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+        }
+    }
+
+    private func toolCategoryLabel(_ title: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(color)
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private func directToolChip(_ title: String, icon: String, color: Color, tool: DirectTool) -> some View {
+        Button {
+            showDirectTool = tool
+        } label: {
+            VStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(color.gradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                Text(title)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+            }
+            .frame(width: 72)
+            .padding(.vertical, 8)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Recent Scans
@@ -191,12 +295,10 @@ struct CaptureView: View {
                 .padding(.horizontal, 20)
             }
         }
-        .padding(.bottom, 12)
     }
 
     private func recentCard(_ item: ScanHistoryItem) -> some View {
         Button {
-            // Re-open as a result
             let entities = item.entities
             let result = ScanResult(
                 image: item.thumbnailImage ?? UIImage(),
@@ -251,7 +353,6 @@ struct CaptureView: View {
             Task { await viewModel.processImage(clipboardImage) }
         } else if let clipboardText = UIPasteboard.general.string,
                   !clipboardText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            // Create a text-only result (no image)
             let detector = SmartDetector()
             let entities = detector.detect(in: clipboardText)
             let result = ScanResult(
@@ -262,6 +363,44 @@ struct CaptureView: View {
             viewModel.scanResult = result
         } else {
             showPasteAlert = true
+        }
+    }
+}
+
+// MARK: - Direct Tool Enum
+
+enum DirectTool: String, Identifiable {
+    case removeBG, compress, passport, colorPicker, imageToPDF
+    case wordCounter, summarizer, compare, jsonFormatter
+    case qrScanner, docScanner, batchScan, signDocument
+    case unitConverter, ruler
+    case receipt, table, notes, docToPDF, websiteDetect
+
+    var id: String { rawValue }
+
+    @MainActor @ViewBuilder
+    var view: some View {
+        switch self {
+        case .removeBG: RemoveBackgroundView()
+        case .compress: ImageCompressorView()
+        case .passport: PassportPhotoView()
+        case .colorPicker: ColorPickerImageView()
+        case .imageToPDF: ImageToPDFView()
+        case .wordCounter: WordCounterView()
+        case .summarizer: TextSummarizerView()
+        case .compare: TextCompareView()
+        case .jsonFormatter: CodeFormatterView()
+        case .qrScanner: QRScannerTab()
+        case .docScanner: DocumentScannerTab()
+        case .batchScan: BatchScanView()
+        case .signDocument: DocumentSigningView()
+        case .unitConverter: UnitConverterView()
+        case .ruler: RulerView()
+        case .receipt: ReceiptScannerView()
+        case .table: TableExtractorView()
+        case .notes: NotesFromScanView()
+        case .docToPDF: DocToPDFView()
+        case .websiteDetect: WebsiteDetectionView()
         }
     }
 }
