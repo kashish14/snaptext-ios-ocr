@@ -3,7 +3,6 @@ import SwiftUI
 enum EntityCategoryHelper {
 
     static let categoryOrder: [(type: DetectedEntity.EntityType, icon: String, label: String, color: Color)] = [
-        (.otp,            "lock.shield.fill",              "OTP",          .orange),
         (.phoneNumber,    "phone.fill",                    "Numbers",      .green),
         (.address,        "map.fill",                      "Maps",         .blue),
         (.email,          "envelope.fill",                 "Emails",       .purple),
@@ -39,7 +38,6 @@ enum EntityCategoryHelper {
         case .address:        return "Addresses"
         case .email:          return "Emails"
         case .url:            return "Links"
-        case .otp:            return "OTP Codes"
         case .date:           return "Dates & Events"
         case .upiId:          return "UPI IDs"
         case .trackingNumber: return "Tracking Numbers"

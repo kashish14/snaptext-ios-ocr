@@ -60,6 +60,42 @@ final class CalendarManager {
         }
     }
 
+    /// Extracts a meaningful event title from the date's surrounding text.
+    /// e.g., "Flight AI 302 on 15 Apr 2026" → "Flight AI 302"
+    /// e.g., "Meeting 3:00 PM" → "Meeting"
+    /// e.g., "15 Apr 2026" → "Event on 15 Apr 2026"
+    func smartTitle(from dateText: String) -> String {
+        let text = dateText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // If the text has context beyond just a date, extract the non-date part
+        // Remove common date patterns to find the "title" part
+        let datePatterns = [
+            #"\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}"#,
+            #"\d{1,2}(?:st|nd|rd|th)?\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{2,4}"#,
+            #"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}"#,
+            #"\d{1,2}:\d{2}\s*(?:AM|PM|am|pm|hrs?)?"#,
+            #"(?:on|at|by|from|to|until|before|after)\s*"#,
+        ]
+
+        var title = text
+        for pattern in datePatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) {
+                let range = NSRange(title.startIndex..., in: title)
+                title = regex.stringByReplacingMatches(in: title, range: range, withTemplate: "")
+            }
+        }
+
+        title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ",-:;"))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if title.count >= 3 {
+            return title
+        }
+
+        return "Event on \(text)"
+    }
+
     /// Parses date from the entity's secondaryValue (ISO8601) or tries natural language
     func parseDate(from entity: DetectedEntity) -> Date? {
         // Try ISO8601 from secondaryValue first

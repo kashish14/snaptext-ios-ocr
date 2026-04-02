@@ -61,7 +61,7 @@ struct ToolsView: View {
                         Text("20 tools \u{2022} 20+ auto-detections")
                             .font(.caption.bold())
                             .foregroundStyle(.secondary)
-                        Text("OTP \u{2022} Phone \u{2022} Email \u{2022} Address \u{2022} URL \u{2022} Date \u{2022} UPI \u{2022} Tracking \u{2022} WiFi \u{2022} Flight \u{2022} PAN \u{2022} Aadhaar \u{2022} GST \u{2022} IFSC \u{2022} Coordinates \u{2022} & more")
+                        Text("Phone \u{2022} Email \u{2022} Address \u{2022} URL \u{2022} Date \u{2022} UPI \u{2022} Tracking \u{2022} WiFi \u{2022} Flight \u{2022} PAN \u{2022} Aadhaar \u{2022} GST \u{2022} IFSC \u{2022} Coordinates \u{2022} & more")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)

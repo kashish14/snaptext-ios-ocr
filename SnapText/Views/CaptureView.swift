@@ -206,21 +206,6 @@ struct CaptureView: View {
                 }
             }
 
-            // Text tools row
-            VStack(alignment: .leading, spacing: 8) {
-                toolCategoryLabel("Text", icon: "textformat", color: .green)
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        directToolChip("Word Count", icon: "number", color: .blue, tool: .wordCounter)
-                        directToolChip("Summarize", icon: "text.badge.checkmark", color: .green, tool: .summarizer)
-                        directToolChip("Compare", icon: "doc.text.magnifyingglass", color: .orange, tool: .compare)
-                        directToolChip("JSON", icon: "curlybraces", color: .purple, tool: .jsonFormatter)
-                    }
-                    .padding(.horizontal, 20)
-                }
-            }
-
             // Scan & Utility row
             VStack(alignment: .leading, spacing: 8) {
                 toolCategoryLabel("Scan & More", icon: "viewfinder", color: .orange)

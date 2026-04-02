@@ -1,5 +1,6 @@
 import SwiftUI
 import EventKitUI
+import NetworkExtension
 
 struct EntityListSheet: View {
     let title: String
@@ -27,7 +28,8 @@ struct EntityListSheet: View {
             }
             .sheet(item: $calendarEntity) { entity in
                 let parsedDate = CalendarManager.shared.parseDate(from: entity)
-                CalendarEventEditor(title: entity.value, date: parsedDate)
+                let smartTitle = CalendarManager.shared.smartTitle(from: entity.value)
+                CalendarEventEditor(title: smartTitle, date: parsedDate)
             }
             .alert("Calendar Access Denied", isPresented: $showCalendarDenied) {
                 Button("Open Settings") {
@@ -185,9 +187,9 @@ struct EntityListSheet: View {
 
         case .trackingNumber:
             openURLButton(
-                urlString: "https://www.google.com/search?q=track+\(entity.value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")",
-                icon: "magnifyingglass.circle.fill",
-                color: .blue
+                urlString: trackingURL(for: entity.value),
+                icon: "shippingbox.circle.fill",
+                color: .indigo
             )
 
         case .flightNumber:
@@ -215,8 +217,21 @@ struct EntityListSheet: View {
                 color: .pink
             )
 
-        case .otp, .ifscCode, .panNumber, .aadhaarNumber, .gstNumber,
-             .orderId, .ipAddress, .bankAccount, .currency, .wifi:
+        case .wifi:
+            if let ssid = entity.value.isEmpty ? nil : entity.value,
+               ssid != "Wifi Password" {
+                Button {
+                    connectToWifi(ssid: ssid, password: entity.secondaryValue)
+                } label: {
+                    Image(systemName: "wifi.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.cyan)
+                }
+                .buttonStyle(.plain)
+            }
+
+        case .ifscCode, .panNumber, .aadhaarNumber, .gstNumber,
+             .orderId, .ipAddress, .bankAccount, .currency:
             EmptyView()
         }
     }
@@ -242,7 +257,6 @@ struct EntityListSheet: View {
         case .address, .coordinates: return .blue
         case .email: return .purple
         case .url: return .orange
-        case .otp: return .red
         case .date: return .red
         case .upiId: return .green
         case .trackingNumber, .orderId: return .indigo
@@ -260,6 +274,55 @@ struct EntityListSheet: View {
         switch type {
         case .wifi: return "Password: \(value)"
         default: return value
+        }
+    }
+
+    private func trackingURL(for number: String) -> String {
+        let encoded = number.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? number
+        let digits = number.filter { $0.isNumber }
+
+        // Blue Dart: 8-11 digit AWB
+        if digits.count >= 8 && digits.count <= 11 {
+            return "https://www.bluedart.com/tracking?handler=tref&numbers=\(encoded)"
+        }
+        // Delhivery: 12-14 digits
+        if digits.count >= 12 && digits.count <= 14 {
+            return "https://www.delhivery.com/track/package/\(encoded)"
+        }
+        // India Post: EE123456789IN format
+        if number.count == 13, number.hasPrefix("E") || number.hasPrefix("R") || number.hasPrefix("C") {
+            return "https://www.indiapost.gov.in/_layouts/15/dop.portal.tracking/trackconsignment.aspx?id=\(encoded)"
+        }
+        // UPS: 1Z format
+        if number.hasPrefix("1Z") {
+            return "https://www.ups.com/track?tracknum=\(encoded)"
+        }
+        // FedEx: 20-22 digits
+        if digits.count >= 20 {
+            return "https://www.fedex.com/fedextrack/?trknbr=\(encoded)"
+        }
+        // Default: use a universal tracker
+        return "https://parcelsapp.com/en/tracking/\(encoded)"
+    }
+
+    private func connectToWifi(ssid: String, password: String?) {
+        let config: NEHotspotConfiguration
+        if let password, !password.isEmpty {
+            config = NEHotspotConfiguration(ssid: ssid, passphrase: password, isWEP: false)
+        } else {
+            config = NEHotspotConfiguration(ssid: ssid)
+        }
+        config.joinOnce = false
+
+        NEHotspotConfigurationManager.shared.apply(config) { error in
+            if let error {
+                // Error code 13 = "already associated" = success
+                if (error as NSError).code == 13 {
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+            } else {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import NetworkExtension
 
 /// The brain of the app. Takes content classification + entities → ranked actions.
 /// Shows top 3–5 as Quick Actions, rest go to "Do More".
@@ -64,22 +65,7 @@ final class ActionPriorityEngine {
         var seenTypes = Set<DetectedEntity.EntityType>()
 
         for entity in entities {
-            // OTP: always show (highest priority)
-            if entity.type == .otp {
-                actions.append(QuickAction(
-                    id: "entity_otp_\(entity.value)",
-                    title: "Copy OTP: \(entity.value)",
-                    icon: "lock.shield.fill",
-                    color: .orange,
-                    score: 100,
-                    category: .text,
-                    toolDestination: nil,
-                    directAction: { ClipboardManager.shared.copy(entity.value, source: "OTP") }
-                ))
-                continue
-            }
-
-            // For other entities, show first of each type
+            // For each entity type, show first occurrence
             guard !seenTypes.contains(entity.type) else { continue }
             seenTypes.insert(entity.type)
 
@@ -179,6 +165,51 @@ final class ActionPriorityEngine {
                         }
                     }
                 ))
+            case .trackingNumber:
+                let trackNum = entity.value
+                actions.append(QuickAction(
+                    id: "entity_tracking",
+                    title: "Track \(trackNum)",
+                    icon: "shippingbox.fill",
+                    color: .indigo,
+                    score: 95,
+                    category: .utility,
+                    toolDestination: nil,
+                    directAction: {
+                        let encoded = trackNum.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trackNum
+                        if let url = URL(string: "https://parcelsapp.com/en/tracking/\(encoded)") {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                ))
+            case .wifi:
+                let ssid = entity.value
+                let password = entity.secondaryValue
+                if ssid != "Wifi Password" {
+                    actions.append(QuickAction(
+                        id: "entity_wifi",
+                        title: "Connect to \(ssid)",
+                        icon: "wifi",
+                        color: .cyan,
+                        score: 95,
+                        category: .utility,
+                        toolDestination: nil,
+                        directAction: {
+                            let config: NEHotspotConfiguration
+                            if let password, !password.isEmpty {
+                                config = NEHotspotConfiguration(ssid: ssid, passphrase: password, isWEP: false)
+                            } else {
+                                config = NEHotspotConfiguration(ssid: ssid)
+                            }
+                            config.joinOnce = false
+                            NEHotspotConfigurationManager.shared.apply(config) { error in
+                                if error == nil || (error as? NSError)?.code == 13 {
+                                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                                }
+                            }
+                        }
+                    ))
+                }
             default:
                 break
             }

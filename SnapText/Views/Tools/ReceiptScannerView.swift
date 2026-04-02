@@ -8,6 +8,9 @@ struct ReceiptScannerView: View {
     @State private var receiptInfo: ReceiptInfo?
     @State private var errorMessage: String?
     @State private var didApplyContext = false
+    @State private var splitCount = 2
+    @State private var showSplit = false
+    @State private var manualTotal = ""
 
     private let ocrService = OCRService()
 
@@ -134,6 +137,9 @@ struct ReceiptScannerView: View {
                     }
                 }
 
+                // Bill Split — always show, with manual entry fallback
+                billSplitSection(totalStr: info.total)
+
                 // Full text
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Full Text")
@@ -207,6 +213,135 @@ struct ReceiptScannerView: View {
         .padding(.vertical, 10)
     }
 
+    private func billSplitSection(totalStr: String?) -> some View {
+        VStack(spacing: 10) {
+            Button {
+                withAnimation { showSplit.toggle() }
+            } label: {
+                HStack {
+                    Image(systemName: "person.2.fill")
+                        .foregroundStyle(.blue)
+                    Text("Split Bill")
+                        .font(.headline)
+                    Spacer()
+                    Image(systemName: showSplit ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal)
+            }
+            .buttonStyle(.plain)
+
+            if showSplit {
+                VStack(spacing: 12) {
+                    // If no total detected, show manual entry
+                    if totalStr == nil || extractAmount(from: totalStr ?? "") <= 0 {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Enter Total Amount")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("e.g. 1250.00", text: $manualTotal)
+                                .keyboardType(.decimalPad)
+                                .padding(10)
+                                .background(Color(.tertiarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                    } else if let t = totalStr {
+                        HStack {
+                            Text("Total")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(t)
+                                .font(.headline.bold())
+                        }
+                    }
+
+                    HStack(spacing: 16) {
+                        Text("People")
+                            .font(.subheadline)
+                        Spacer()
+                        HStack(spacing: 0) {
+                            Button {
+                                if splitCount > 2 { splitCount -= 1 }
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(splitCount > 2 ? .blue : .gray)
+                            }
+                            .disabled(splitCount <= 2)
+
+                            Text("\(splitCount)")
+                                .font(.title3.bold().monospaced())
+                                .frame(width: 44)
+
+                            Button {
+                                if splitCount < 20 { splitCount += 1 }
+                            } label: {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    }
+
+                    let amount = splitAmount(totalStr: totalStr)
+                    if amount > 0 {
+                        Divider()
+
+                        HStack {
+                            Text("Per person")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text(String(format: "\u{20B9}%.2f", amount / Double(splitCount)))
+                                .font(.title2.bold())
+                                .foregroundStyle(.green)
+                        }
+
+                        Button {
+                            let totalLabel = totalStr ?? "\u{20B9}\(manualTotal)"
+                            let text = "Bill split: \(totalLabel) \u{00F7} \(splitCount) = \(String(format: "\u{20B9}%.2f", amount / Double(splitCount))) per person"
+                            ClipboardManager.shared.copy(text, source: "Receipt")
+                        } label: {
+                            Label("Copy Split", systemImage: "doc.on.doc")
+                                .font(.caption.weight(.medium))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                }
+                .padding()
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    private func splitAmount(totalStr: String?) -> Double {
+        if let t = totalStr {
+            let amt = extractAmount(from: t)
+            if amt > 0 { return amt }
+        }
+        return Double(manualTotal) ?? 0
+    }
+
+    private func extractAmount(from text: String) -> Double {
+        // Extract numeric value from strings like "Total: Rs 1,234.50" or "$49.99"
+        let cleaned = text.replacingOccurrences(of: ",", with: "")
+        let pattern = try! NSRegularExpression(pattern: #"[\d]+\.?\d{0,2}"#)
+        let range = NSRange(cleaned.startIndex..., in: cleaned)
+        let matches = pattern.matches(in: cleaned, range: range)
+
+        // Take the last number (usually the amount)
+        if let last = matches.last, let r = Range(last.range, in: cleaned) {
+            return Double(cleaned[r]) ?? 0
+        }
+        return 0
+    }
+
     private func scanReceipt(_ image: UIImage) async {
         isProcessing = true
         errorMessage = nil
@@ -232,10 +367,35 @@ struct ReceiptScannerView: View {
         // Merchant: usually the first non-empty line or one with address
         let merchant = lines.first { $0.count >= 3 && !$0.contains("$") && !$0.lowercased().contains("receipt") }
 
-        // Total: look for keywords
-        let totalPattern = try! NSRegularExpression(pattern: #"(?:total|grand total|amount due|net amount|payable)\s*[:=]?\s*[\$\u{20B9}]?\s*([\d,]+\.?\d{0,2})"#, options: [.caseInsensitive])
-        let total = firstMatch(totalPattern, in: text, group: 0)?
-            .trimmingCharacters(in: .whitespaces)
+        // Total: look for keywords — try multiple patterns
+        let totalPatterns = [
+            #"(?:grand\s*total|amount\s*due|net\s*amount|payable|total\s*amount|total\s*due)\s*[:=\-]?\s*[Rs.₹$]?\s*([\d,]+\.?\d{0,2})"#,
+            #"(?:total)\s*[:=\-]?\s*[Rs.₹$]?\s*([\d,]+\.?\d{0,2})"#,
+            #"[Rs.₹$]\s*([\d,]+\.\d{2})\s*$"#,
+        ]
+        var total: String?
+        for pattern in totalPatterns {
+            let regex = try! NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .anchorsMatchLines])
+            if let match = firstMatch(regex, in: text, group: 0)?.trimmingCharacters(in: .whitespaces) {
+                total = match
+                break
+            }
+        }
+        // Fallback: find the largest currency amount in text
+        if total == nil {
+            let fallbackPattern = try! NSRegularExpression(pattern: #"[Rs.₹$]?\s*([\d,]+\.\d{2})"#)
+            let range = NSRange(text.startIndex..., in: text)
+            let matches = fallbackPattern.matches(in: text, range: range)
+            var largest: (String, Double) = ("", 0)
+            for match in matches {
+                if let r = Range(match.range, in: text) {
+                    let str = String(text[r])
+                    let num = extractAmount(from: str)
+                    if num > largest.1 { largest = (str.trimmingCharacters(in: .whitespaces), num) }
+                }
+            }
+            if largest.1 > 0 { total = largest.0 }
+        }
 
         // Subtotal
         let subtotalPattern = try! NSRegularExpression(pattern: #"(?:subtotal|sub-total|sub total)\s*[:=]?\s*[\$\u{20B9}]?\s*([\d,]+\.?\d{0,2})"#, options: [.caseInsensitive])

@@ -251,15 +251,6 @@ struct ClipboardHistoryView: View {
                         }
                     }
                 ))
-            case .otp:
-                suggestions.append(Suggestion(
-                    icon: "lock.shield.fill",
-                    label: "Copy OTP",
-                    color: .orange,
-                    action: {
-                        ClipboardManager.shared.copy(entity.value, source: "OTP")
-                    }
-                ))
             case .upiId:
                 suggestions.append(Suggestion(
                     icon: "indianrupeesign.circle.fill",
@@ -309,7 +300,7 @@ struct ClipboardHistoryView: View {
         case "Receipt": return "receipt"
         case "Note": return "note.text"
         case "Table": return "tablecells"
-        case "OTP": return "lock.shield.fill"
+        case "Tracking": return "shippingbox.fill"
         case "Summarizer": return "text.badge.checkmark"
         default: return "doc.on.doc"
         }

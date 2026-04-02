@@ -14,7 +14,6 @@ struct DetectedEntity: Identifiable, Hashable {
     }
 
     enum EntityType: String, Hashable, Identifiable, CaseIterable {
-        case otp
         case phoneNumber
         case address
         case email
@@ -44,7 +43,6 @@ struct DetectedEntity: Identifiable, Hashable {
         case .url: return "Open Link"
         case .email: return "Send Email"
         case .address: return "Open in Maps"
-        case .otp: return "Copy OTP: \(value)"
         case .date: return value
         case .upiId: return value
         case .trackingNumber: return value
@@ -69,7 +67,6 @@ struct DetectedEntity: Identifiable, Hashable {
         case .url: return "link"
         case .email: return "envelope.fill"
         case .address: return "map.fill"
-        case .otp: return "lock.shield.fill"
         case .date: return "calendar"
         case .upiId: return "indianrupeesign.circle.fill"
         case .trackingNumber: return "shippingbox.fill"
@@ -100,15 +97,6 @@ final class SmartDetector {
         pattern: #"(?<!\d)(?:\+?\d{1,3}[\s.-]?)?(?:\(?\d{2,5}\)?[\s.-]?)?\d{3,5}[\s.-]?\d{3,5}(?!\d)"#
     )
 
-    // OTP: 4-8 digit codes near keywords
-    private static let otpPattern = try! NSRegularExpression(
-        pattern: #"(?<!\d)\d{4,8}(?!\d)"#
-    )
-    private static let otpKeywords = [
-        "otp", "code", "verify", "verification", "pin",
-        "password", "passcode", "one.time", "one-time", "2fa"
-    ]
-
     // UPI: user@bank format — common UPI handles
     private static let upiPattern = try! NSRegularExpression(
         pattern: #"[a-zA-Z0-9._-]+@(?:ybl|paytm|oksbi|okicici|okaxis|upi|ibl|sbi|apl|axisbank|icici|hdfcbank|kotak|indus|barodampay|unionbankofindia|federal|rbl|citi|dbs|jio|slice|freecharge|airtel|postbank|equitas|yesbank|hsbc|kvb|idfc|idbi|scb|pnb|cnrb|iob|boi|lvb)"#,
@@ -117,22 +105,28 @@ final class SmartDetector {
 
     // Tracking: courier/order tracking numbers — explicit label patterns
     private static let trackingPattern = try! NSRegularExpression(
-        pattern: #"(?:AWB|TRK|TRACK(?:ING)?|SHIP(?:MENT)?|CONSIGNMENT|WAYBILL|DOCKET)[\s:.\-#]*([A-Z0-9]{6,22})"#,
+        pattern: #"(?:AWB|TRK|TRACK(?:ING)?|SHIP(?:MENT)?|CONSIGNMENT|WAYBILL|DOCKET|AIR\s*WAYBILL)[\s:.\-#No.]*([A-Z0-9]{6,22})"#,
         options: [.caseInsensitive]
     )
-    // Common courier-specific patterns: Delhivery, BlueDart, DTDC, India Post, FedEx, DHL, etc.
+    // Common courier-specific patterns
     private static let courierPatterns = [
+        try! NSRegularExpression(pattern: #"\b\d{8,11}\b"#),          // BlueDart, DTDC (8-11 digits)
         try! NSRegularExpression(pattern: #"\b\d{12,14}\b"#),          // Delhivery, India Post (12-14 digits)
         try! NSRegularExpression(pattern: #"\b[A-Z]{2}\d{9}[A-Z]{2}\b"#), // International postal (EE123456789IN)
         try! NSRegularExpression(pattern: #"\b1Z[A-Z0-9]{16}\b"#),     // UPS
         try! NSRegularExpression(pattern: #"\b\d{20,22}\b"#),          // FedEx (20-22 digits)
+        try! NSRegularExpression(pattern: #"\b[A-Z]\d{9,11}\b"#),      // DTDC, Ekart (letter + 9-11 digits)
+        try! NSRegularExpression(pattern: #"\b\d{4}\s?\d{4}\s?\d{4}\b"#), // Spaced 12-digit (India Post)
     ]
-    // Generic long alphanumeric tracking IDs near keywords
+    // Keywords that indicate tracking context
     private static let trackingKeywords = [
         "tracking", "awb", "shipment", "courier", "consignment", "waybill",
         "docket", "delivery", "dispatched", "shipped", "out for delivery",
-        "delhivery", "bluedart", "dtdc", "ecom express", "fedex", "dhl",
-        "india post", "speed post", "ekart", "xpressbees", "shadowfax"
+        "delhivery", "bluedart", "blue dart", "dtdc", "ecom express", "fedex", "dhl",
+        "india post", "speed post", "ekart", "xpressbees", "shadowfax",
+        "air waybill", "booking ref", "parcel", "package", "dispatch",
+        "sender", "receiver", "consignee", "origin", "destination",
+        "weight", "pieces", "pcs", "pickup"
     ]
 
     // Wifi SSID and password
@@ -230,12 +224,7 @@ final class SmartDetector {
         var entities: [DetectedEntity] = []
         let lowered = text.lowercased()
 
-        // 1. OTP (highest priority — time-sensitive)
-        let otps = detectOTPs(in: text)
-        entities.append(contentsOf: otps)
-        let otpValues = Set(otps.map { $0.value })
-
-        // 2. NSDataDetector for phone, links, emails, addresses
+        // 1. NSDataDetector for phone, links, emails, addresses
         var detectedPhoneValues = Set<String>()
         var detectedAddressValues = Set<String>()
 
@@ -277,18 +266,17 @@ final class SmartDetector {
             }
         }
 
-        // 3. Phone regex fallback
+        // 2. Phone regex fallback
         for phone in regexMatches(Self.phonePattern, in: text) {
             let normalized = phone.filter { $0.isNumber || $0 == "+" }
             if normalized.count >= 7, normalized.count <= 15,
-               !detectedPhoneValues.contains(normalized),
-               !otpValues.contains(phone.trimmingCharacters(in: .whitespaces)) {
+               !detectedPhoneValues.contains(normalized) {
                 detectedPhoneValues.insert(normalized)
                 entities.append(DetectedEntity(type: .phoneNumber, value: phone))
             }
         }
 
-        // 4. Line-by-line address detection
+        // 3. Line-by-line address detection
         let lines = text.components(separatedBy: .newlines)
         if let addrDetector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.address.rawValue) {
             for line in lines {
@@ -306,33 +294,33 @@ final class SmartDetector {
             }
         }
 
-        // 5. Dates
+        // 4. Dates
         entities.append(contentsOf: detectDates(in: text))
 
-        // 6. UPI IDs
+        // 5. UPI IDs
         for match in regexMatches(Self.upiPattern, in: text) {
             entities.append(DetectedEntity(type: .upiId, value: match))
         }
 
-        // 7. Tracking Numbers
+        // 6. Tracking Numbers
         entities.append(contentsOf: detectTracking(in: text, lowered: lowered))
 
-        // 8. Wifi Credentials
+        // 7. Wifi Credentials
         if let wifi = detectWifi(in: text) {
             entities.append(wifi)
         }
 
-        // 9. Flight Numbers
+        // 8. Flight Numbers
         for match in regexMatches(Self.flightPattern, in: text) {
             entities.append(DetectedEntity(type: .flightNumber, value: match.uppercased()))
         }
 
-        // 10. Currency
+        // 9. Currency
         for match in regexMatches(Self.currencyPattern, in: text) {
             entities.append(DetectedEntity(type: .currency, value: match))
         }
 
-        // 11. Social Handles
+        // 10. Social Handles
         let detectedEmails = Set(entities.filter { $0.type == .email }.map { $0.value.lowercased() })
         let detectedUPIs = Set(entities.filter { $0.type == .upiId }.map { $0.value.lowercased() })
         for match in regexMatches(Self.socialHandlePattern, in: text) {
@@ -345,12 +333,12 @@ final class SmartDetector {
             }
         }
 
-        // 12. IFSC Codes
+        // 11. IFSC Codes
         for match in regexMatches(Self.ifscPattern, in: text) {
             entities.append(DetectedEntity(type: .ifscCode, value: match))
         }
 
-        // 13. PAN Numbers
+        // 12. PAN Numbers
         for match in regexMatches(Self.panPattern, in: text) {
             // Avoid false positives with IFSC (already detected)
             let isIFSC = entities.contains { $0.type == .ifscCode && $0.value.contains(match) }
@@ -360,31 +348,31 @@ final class SmartDetector {
             }
         }
 
-        // 14. Aadhaar Numbers
+        // 13. Aadhaar Numbers
         for match in regexMatches(Self.aadhaarPattern, in: text) {
             entities.append(DetectedEntity(type: .aadhaarNumber, value: match))
         }
 
-        // 15. GST Numbers
+        // 14. GST Numbers
         for match in regexMatches(Self.gstPattern, in: text) {
             entities.append(DetectedEntity(type: .gstNumber, value: match))
         }
 
-        // 16. Coordinates
+        // 15. Coordinates
         for match in regexMatches(Self.coordinatesPattern, in: text) {
             entities.append(DetectedEntity(type: .coordinates, value: match))
         }
 
-        // 17. Order IDs (exclude already-detected tracking numbers)
+        // 16. Order IDs (exclude already-detected tracking numbers)
         let trackingValues = Set(entities.filter { $0.type == .trackingNumber }.map { $0.value })
         entities.append(contentsOf: detectOrderIds(in: text, excludeTracking: trackingValues))
 
-        // 18. IP Addresses
+        // 17. IP Addresses
         for match in regexMatches(Self.ipv4Pattern, in: text) {
             entities.append(DetectedEntity(type: .ipAddress, value: match))
         }
 
-        // 19. Bank Account Numbers (exclude already-detected values)
+        // 18. Bank Account Numbers (exclude already-detected values)
         let allDetectedValues = Set(entities.map { $0.value })
         entities.append(contentsOf: detectBankAccounts(in: text, lowered: lowered, exclude: allDetectedValues))
 
@@ -392,16 +380,6 @@ final class SmartDetector {
     }
 
     // MARK: - Specialized Detectors
-
-    private func detectOTPs(in text: String) -> [DetectedEntity] {
-        let lowered = text.lowercased()
-        let hasKeyword = Self.otpKeywords.contains { lowered.contains($0) }
-        guard hasKeyword else { return [] }
-
-        return regexMatches(Self.otpPattern, in: text).map {
-            DetectedEntity(type: .otp, value: $0)
-        }
-    }
 
     /// Represents a raw date match with its position in the source text
     private struct DateMatch {
@@ -491,9 +469,25 @@ final class SmartDetector {
         var results: [DetectedEntity] = []
         var detectedValues = Set<String>()
 
-        // Explicit tracking patterns (AWB:, TRK:, TRACKING:, etc.)
+        // Collect phone numbers to exclude from tracking (avoid false positives)
+        var phoneNumbers = Set<String>()
+        for phone in regexMatches(Self.phonePattern, in: text) {
+            phoneNumbers.insert(phone.filter { $0.isNumber })
+        }
+
+        // Helper: skip values that look like phone numbers, pin codes, or dates
+        func isValidTracking(_ val: String) -> Bool {
+            let digits = val.filter { $0.isNumber }
+            // Skip 6-digit values (likely pin codes)
+            if digits.count == 6, val.allSatisfy({ $0.isNumber || $0 == " " }) { return false }
+            // Skip if it matches a detected phone number
+            if phoneNumbers.contains(digits) { return false }
+            return true
+        }
+
+        // 1. Explicit tracking patterns (AWB:, TRK:, TRACKING:, etc.) — always match
         for match in regexGroupMatches(Self.trackingPattern, in: text, group: 1) {
-            if detectedValues.insert(match).inserted {
+            if detectedValues.insert(match).inserted && isValidTracking(match) {
                 results.append(DetectedEntity(type: .trackingNumber, value: match))
             }
         }
@@ -501,19 +495,20 @@ final class SmartDetector {
         let hasKeyword = Self.trackingKeywords.contains(where: { lowered.contains($0) })
 
         if hasKeyword {
-            // Courier-specific patterns (Delhivery 14-digit, FedEx 20-digit, UPS 1Z, postal codes)
+            // 2. Courier-specific patterns
             for pattern in Self.courierPatterns {
                 for match in regexMatches(pattern, in: text) {
-                    if detectedValues.insert(match).inserted {
-                        results.append(DetectedEntity(type: .trackingNumber, value: match))
+                    let cleaned = match.replacingOccurrences(of: " ", with: "")
+                    if detectedValues.insert(cleaned).inserted && isValidTracking(cleaned) {
+                        results.append(DetectedEntity(type: .trackingNumber, value: cleaned))
                     }
                 }
             }
 
-            // Generic long alphanumeric near tracking keywords
-            let genericPattern = try! NSRegularExpression(pattern: #"\b[A-Z0-9]{8,22}\b"#)
+            // 3. Generic long alphanumeric near tracking keywords
+            let genericPattern = try! NSRegularExpression(pattern: #"\b[A-Z0-9]{10,22}\b"#)
             for match in regexMatches(genericPattern, in: text) {
-                if detectedValues.insert(match).inserted {
+                if detectedValues.insert(match).inserted && isValidTracking(match) {
                     results.append(DetectedEntity(type: .trackingNumber, value: match))
                 }
             }

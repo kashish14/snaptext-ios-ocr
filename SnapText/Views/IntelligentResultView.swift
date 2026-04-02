@@ -151,9 +151,6 @@ struct IntelligentResultView: View {
                             Button {
                                 action.directAction?()
                                 UserBehaviorTracker.shared.recordAction(action.id)
-                                if action.id.hasPrefix("entity_otp") {
-                                    showCopiedFeedback()
-                                }
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: action.icon)
@@ -222,7 +219,14 @@ struct IntelligentResultView: View {
                     ClipboardManager.shared.copy(result.text, source: "Scan")
                     showCopiedFeedback()
                 } label: {
-                    Label("Copy All", systemImage: "doc.on.doc")
+                    Label("Copy", systemImage: "doc.on.doc")
+                        .font(.caption.weight(.medium))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+
+                ShareLink(item: cleanText) {
+                    Label("Share", systemImage: "square.and.arrow.up")
                         .font(.caption.weight(.medium))
                 }
                 .buttonStyle(.bordered)
@@ -427,5 +431,42 @@ struct IntelligentResultView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation(.spring(duration: 0.3)) { showCopiedToast = false }
         }
+    }
+
+    // MARK: - Clean Text for Sharing
+
+    private var cleanText: String {
+        // Merge broken OCR lines, fix spacing for WhatsApp/sharing
+        let lines = result.text.components(separatedBy: "\n")
+        var cleaned: [String] = []
+        var current = ""
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty {
+                if !current.isEmpty {
+                    cleaned.append(current)
+                    current = ""
+                }
+                cleaned.append("")
+            } else if current.isEmpty {
+                current = trimmed
+            } else if trimmed.first?.isUppercase == true ||
+                      trimmed.hasPrefix("-") ||
+                      trimmed.hasPrefix("\u{2022}") ||
+                      trimmed.first?.isNumber == true {
+                cleaned.append(current)
+                current = trimmed
+            } else {
+                current += " " + trimmed
+            }
+        }
+        if !current.isEmpty { cleaned.append(current) }
+
+        // Remove consecutive blank lines
+        return cleaned.reduce(into: [String]()) { result, line in
+            if line.isEmpty && result.last?.isEmpty == true { return }
+            result.append(line)
+        }.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

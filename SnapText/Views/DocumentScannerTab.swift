@@ -189,11 +189,28 @@ struct DocumentCameraRepresentable: UIViewControllerRepresentable {
 extension UIImage {
     func blackAndWhite() -> UIImage {
         guard let ciImage = CIImage(image: self) else { return self }
-        let filter = CIFilter(name: "CIColorControls")!
-        filter.setValue(ciImage, forKey: kCIInputImageKey)
-        filter.setValue(0.0, forKey: kCIInputSaturationKey)
-        filter.setValue(0.1, forKey: kCIInputContrastKey)
-        guard let output = filter.outputImage else { return self }
+
+        // Step 1: Remove color
+        let mono = CIFilter(name: "CIColorControls")!
+        mono.setValue(ciImage, forKey: kCIInputImageKey)
+        mono.setValue(0.0, forKey: kCIInputSaturationKey)
+        mono.setValue(1.0, forKey: kCIInputBrightnessKey)  // keep brightness
+        guard let grayOutput = mono.outputImage else { return self }
+
+        // Step 2: Threshold for crisp B&W (like a photocopy)
+        // Use CIColorMap or a curve to push grays to black/white
+        let threshold = CIFilter(name: "CIExposureAdjust")!
+        threshold.setValue(grayOutput, forKey: kCIInputImageKey)
+        threshold.setValue(0.3, forKey: kCIInputEVKey)  // slight brighten
+        guard let brightened = threshold.outputImage else { return self }
+
+        // Step 3: High contrast to make text crisp, background white
+        let contrast = CIFilter(name: "CIColorControls")!
+        contrast.setValue(brightened, forKey: kCIInputImageKey)
+        contrast.setValue(2.5, forKey: kCIInputContrastKey)  // strong contrast
+        contrast.setValue(0.0, forKey: kCIInputSaturationKey)
+        guard let output = contrast.outputImage else { return self }
+
         let context = CIContext()
         guard let cgImage = context.createCGImage(output, from: output.extent) else { return self }
         return UIImage(cgImage: cgImage, scale: scale, orientation: imageOrientation)
