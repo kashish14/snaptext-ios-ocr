@@ -5,12 +5,8 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            Tab("Scan", systemImage: "doc.text.viewfinder") {
-                ScanView()
-            }
-
-            Tab("Tools", systemImage: "wrench.and.screwdriver") {
-                ToolsView()
+            Tab("Capture", systemImage: "viewfinder") {
+                CaptureView()
             }
 
             Tab("Clipboard", systemImage: "clipboard") {
@@ -24,7 +20,6 @@ struct ContentView: View {
         .tint(.blue)
         .onAppear {
             ClipboardManager.shared.modelContext = modelContext
-            // Polished tab bar appearance
             let tabAppearance = UITabBarAppearance()
             tabAppearance.configureWithDefaultBackground()
             UITabBar.appearance().scrollEdgeAppearance = tabAppearance
