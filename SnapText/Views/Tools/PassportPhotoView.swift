@@ -1,4 +1,6 @@
 import SwiftUI
+import Photos
+import Vision
 
 struct PassportPhotoView: View {
     @Environment(\.toolContext) private var toolContext
@@ -11,6 +13,8 @@ struct PassportPhotoView: View {
     @State private var customHeight = ""
     @State private var isCustom = false
     @State private var addWhiteBG = false
+    @State private var savedToPhotos = false
+    @State private var saveError: String?
 
     // Each preset has unique aspect ratio or unique output size
     // Grouped: no duplicates, clearly different ratios
@@ -229,9 +233,35 @@ struct PassportPhotoView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                .disabled(isCustom && (Int(customWidth) ?? 0) < 50 && (Int(customHeight) ?? 0) < 50)
+                .disabled(isCustom && ((Int(customWidth) ?? 0) < 50 || (Int(customHeight) ?? 0) < 50))
 
                 if let cropped = croppedImage {
+                    // Size info badge
+                    HStack(spacing: 6) {
+                        Image(systemName: "info.circle")
+                            .font(.caption2)
+                        Text("Output: \(Int(cropped.size.width))\u{00D7}\(Int(cropped.size.height)) px")
+                            .font(.caption.weight(.medium))
+                    }
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color(.tertiarySystemGroupedBackground))
+                    .clipShape(Capsule())
+
+                    // Save to Photos
+                    Button {
+                        saveToPhotos(cropped)
+                    } label: {
+                        Label(savedToPhotos ? "Saved to Photos" : "Save to Photos", systemImage: savedToPhotos ? "checkmark.circle.fill" : "square.and.arrow.down")
+                            .font(.body.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(savedToPhotos ? .green : .accentColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+
                     ShareLink(item: Image(uiImage: cropped), preview: SharePreview("Passport Photo", image: Image(uiImage: cropped))) {
                         Label("Share Photo", systemImage: "square.and.arrow.up")
                             .font(.body.weight(.semibold))
@@ -252,6 +282,12 @@ struct PassportPhotoView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
+
+                    if let err = saveError {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
                 }
 
                 Button {
@@ -379,39 +415,76 @@ struct PassportPhotoView: View {
         }
     }
 
-    // MARK: - Crop
+    // MARK: - Save to Photos
+
+    private func saveToPhotos(_ image: UIImage) {
+        PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+            guard status == .authorized || status == .limited else {
+                DispatchQueue.main.async {
+                    saveError = "Photo library access denied. Enable in Settings."
+                }
+                return
+            }
+            PHPhotoLibrary.shared().performChanges {
+                let request = PHAssetCreationRequest.forAsset()
+                if let data = image.pngData() {
+                    request.addResource(with: .photo, data: data, options: nil)
+                }
+            } completionHandler: { success, error in
+                DispatchQueue.main.async {
+                    if success {
+                        savedToPhotos = true
+                        saveError = nil
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    } else {
+                        saveError = error?.localizedDescription ?? "Failed to save"
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Crop (with face detection)
 
     private func cropImage(_ image: UIImage) {
         let tw = CGFloat(targetWidth)
         let th = CGFloat(targetHeight)
         guard tw > 0, th > 0 else { return }
 
-        // Normalize orientation first
         let normalized = image.fixedOrientation()
+        guard let cgImage = normalized.cgImage else { return }
+
+        // Detect face to center crop on it
+        let faceCenter = detectFaceCenter(in: cgImage, imageSize: normalized.size)
+
         let imageSize = normalized.size
         let targetAspect = tw / th
-
         var cropRect: CGRect
         let imageAspect = imageSize.width / imageSize.height
 
         if imageAspect > targetAspect {
-            // Image wider than target — crop sides, center horizontally
             let newWidth = imageSize.height * targetAspect
-            let xOffset = (imageSize.width - newWidth) / 2
+            let centerX = faceCenter?.x ?? (imageSize.width / 2)
+            let xOffset = max(0, min(imageSize.width - newWidth, centerX - newWidth / 2))
             cropRect = CGRect(x: xOffset, y: 0, width: newWidth, height: imageSize.height)
         } else {
-            // Image taller than target — crop bottom, bias toward top (face)
             let newHeight = imageSize.width / targetAspect
-            // 25% offset from top — keeps face in frame
-            let yOffset = max(0, (imageSize.height - newHeight) * 0.25)
-            cropRect = CGRect(x: 0, y: yOffset, width: imageSize.width, height: newHeight)
+            if let face = faceCenter {
+                // Place face in upper third of the crop
+                let desiredFaceY = newHeight * 0.35
+                let yOffset = max(0, min(imageSize.height - newHeight, face.y - desiredFaceY))
+                cropRect = CGRect(x: 0, y: yOffset, width: imageSize.width, height: newHeight)
+            } else {
+                let yOffset = max(0, (imageSize.height - newHeight) * 0.25)
+                cropRect = CGRect(x: 0, y: yOffset, width: imageSize.width, height: newHeight)
+            }
         }
 
-        guard let cgImage = normalized.cgImage?.cropping(to: cropRect) else { return }
+        guard let cropped = cgImage.cropping(to: cropRect) else { return }
+        savedToPhotos = false
+        saveError = nil
 
-        // Resize to exact target pixels
         if addWhiteBG {
-            // Add 10% white padding around the photo (like a printed passport sheet)
             let padFraction: CGFloat = 0.10
             let padW = tw * padFraction
             let padH = th * padFraction
@@ -420,14 +493,28 @@ struct PassportPhotoView: View {
             croppedImage = renderer.image { ctx in
                 UIColor.white.setFill()
                 ctx.fill(CGRect(origin: .zero, size: totalSize))
-                UIImage(cgImage: cgImage).draw(in: CGRect(x: padW, y: padH, width: tw, height: th))
+                UIImage(cgImage: cropped).draw(in: CGRect(x: padW, y: padH, width: tw, height: th))
             }
         } else {
             let size = CGSize(width: tw, height: th)
             let renderer = UIGraphicsImageRenderer(size: size)
             croppedImage = renderer.image { _ in
-                UIImage(cgImage: cgImage).draw(in: CGRect(origin: .zero, size: size))
+                UIImage(cgImage: cropped).draw(in: CGRect(origin: .zero, size: size))
             }
         }
+    }
+
+    /// Returns face center in image coordinates (top-left origin), or nil if no face found.
+    private func detectFaceCenter(in cgImage: CGImage, imageSize: CGSize) -> CGPoint? {
+        let request = VNDetectFaceRectanglesRequest()
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        try? handler.perform([request])
+
+        guard let face = request.results?.first else { return nil }
+        // Vision uses bottom-left origin normalized coords — convert to top-left image coords
+        let box = face.boundingBox
+        let cx = box.midX * imageSize.width
+        let cy = (1 - box.midY) * imageSize.height
+        return CGPoint(x: cx, y: cy)
     }
 }

@@ -8,6 +8,7 @@ final class ScanHistoryItem {
     var text: String
     var timestamp: Date
     @Attribute(.externalStorage) var imageData: Data?
+    var isFavorite: Bool
 
     // Store entities as JSON for persistence
     var entitiesJSON: Data?
@@ -16,6 +17,7 @@ final class ScanHistoryItem {
         self.id = UUID()
         self.text = text
         self.timestamp = timestamp
+        self.isFavorite = false
         self.imageData = image?.jpegData(compressionQuality: 0.5)
         self.entitiesJSON = try? JSONEncoder().encode(
             entities.map { StoredEntity(type: $0.type.rawValue, value: $0.value, secondaryValue: $0.secondaryValue) }

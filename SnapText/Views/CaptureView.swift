@@ -47,10 +47,9 @@ struct CaptureView: View {
                 viewModel.modelContext = modelContext
             }
             .fullScreenCover(isPresented: $viewModel.showCamera) {
-                CameraView { image in
+                LiveCameraView { image in
                     Task { await viewModel.processImage(image) }
                 }
-                .ignoresSafeArea()
             }
             .sheet(isPresented: $viewModel.showGallery) {
                 ImagePicker { image in
@@ -198,7 +197,9 @@ struct CaptureView: View {
                     HStack(spacing: 8) {
                         directToolChip("Remove BG", icon: "person.and.background.strikethrough", color: .pink, tool: .removeBG)
                         directToolChip("Compress", icon: "arrow.down.right.and.arrow.up.left", color: .blue, tool: .compress)
+                        directToolChip("Resize", icon: "arrow.up.left.and.arrow.down.right", color: .cyan, tool: .imageResize)
                         directToolChip("Passport", icon: "person.crop.rectangle", color: .purple, tool: .passport)
+                        directToolChip("Watermark", icon: "textformat.abc.dottedunderline", color: .orange, tool: .watermark)
                         directToolChip("Color Pick", icon: "eyedropper", color: .pink, tool: .colorPicker)
                         directToolChip("To PDF", icon: "doc.fill", color: .red, tool: .imageToPDF)
                     }
@@ -212,10 +213,15 @@ struct CaptureView: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
+                        directToolChip("Handwriting", icon: "hand.draw", color: .indigo, tool: .handwriting)
+                        directToolChip("Translate", icon: "translate", color: .green, tool: .scanTranslate)
+                        directToolChip("Analyze", icon: "brain.head.profile", color: .purple, tool: .smartAnalyze)
+                        directToolChip("Objects", icon: "eye.fill", color: .teal, tool: .objectDetector)
                         directToolChip("QR Code", icon: "qrcode.viewfinder", color: .purple, tool: .qrScanner)
                         directToolChip("Document", icon: "doc.viewfinder", color: .teal, tool: .docScanner)
                         directToolChip("Batch", icon: "doc.on.doc", color: .orange, tool: .batchScan)
                         directToolChip("Sign Doc", icon: "signature", color: .green, tool: .signDocument)
+                        directToolChip("Merge PDF", icon: "doc.on.doc.fill", color: .red, tool: .pdfMerge)
                         directToolChip("Units", icon: "arrow.left.arrow.right", color: .teal, tool: .unitConverter)
                         directToolChip("Ruler", icon: "ruler", color: .brown, tool: .ruler)
                     }
@@ -360,6 +366,8 @@ enum DirectTool: String, Identifiable {
     case qrScanner, docScanner, batchScan, signDocument
     case unitConverter, ruler
     case receipt, table, notes, docToPDF, websiteDetect
+    case handwriting, scanTranslate, imageResize, watermark, pdfMerge
+    case smartAnalyze, objectDetector
 
     var id: String { rawValue }
 
@@ -386,6 +394,13 @@ enum DirectTool: String, Identifiable {
         case .notes: NotesFromScanView()
         case .docToPDF: DocToPDFView()
         case .websiteDetect: WebsiteDetectionView()
+        case .handwriting: HandwritingView()
+        case .scanTranslate: ScanTranslateView()
+        case .imageResize: ImageResizeView()
+        case .watermark: WatermarkView()
+        case .pdfMerge: PDFMergeView()
+        case .smartAnalyze: SmartSummaryView()
+        case .objectDetector: ObjectDetectorView()
         }
     }
 }

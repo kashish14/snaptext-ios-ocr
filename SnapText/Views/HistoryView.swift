@@ -6,14 +6,23 @@ struct HistoryView: View {
     @Query(sort: \ScanHistoryItem.timestamp, order: .reverse) private var historyItems: [ScanHistoryItem]
     @State private var selectedItem: ScanHistoryItem?
     @State private var searchText = ""
+    @State private var showFavoritesOnly = false
 
     private var filteredItems: [ScanHistoryItem] {
-        guard !searchText.isEmpty else { return historyItems }
+        var items = historyItems
+        if showFavoritesOnly {
+            items = items.filter { $0.isFavorite }
+        }
+        guard !searchText.isEmpty else { return items }
         let query = searchText.lowercased()
-        return historyItems.filter { item in
+        return items.filter { item in
             item.text.lowercased().contains(query) ||
             item.entities.contains { $0.value.lowercased().contains(query) }
         }
+    }
+
+    private var hasFavorites: Bool {
+        historyItems.contains { $0.isFavorite }
     }
 
     var body: some View {
@@ -22,13 +31,21 @@ struct HistoryView: View {
                 if historyItems.isEmpty {
                     emptyState
                 } else if filteredItems.isEmpty {
-                    ContentUnavailableView.search(text: searchText)
+                    if showFavoritesOnly {
+                        ContentUnavailableView("No Favorites", systemImage: "star.slash", description: Text("Star scans to find them quickly"))
+                    } else {
+                        ContentUnavailableView.search(text: searchText)
+                    }
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 10) {
                             ForEach(filteredItems) { item in
-                                HistoryCard(item: item)
-                                    .onTapGesture { selectedItem = item }
+                                HistoryCard(item: item, onToggleFavorite: {
+                                    item.isFavorite.toggle()
+                                    try? modelContext.save()
+                                    Haptics.light()
+                                })
+                                .onTapGesture { selectedItem = item }
                             }
                         }
                         .padding(.horizontal)
@@ -41,6 +58,16 @@ struct HistoryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: "Search scans...")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if hasFavorites || showFavoritesOnly {
+                        Button {
+                            showFavoritesOnly.toggle()
+                        } label: {
+                            Image(systemName: showFavoritesOnly ? "star.fill" : "star")
+                                .foregroundStyle(showFavoritesOnly ? .yellow : .secondary)
+                        }
+                    }
+                }
                 if !historyItems.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         EditButton()
@@ -90,6 +117,7 @@ struct HistoryView: View {
 
 private struct HistoryCard: View {
     let item: ScanHistoryItem
+    var onToggleFavorite: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 12) {
@@ -132,6 +160,15 @@ private struct HistoryCard: View {
             }
 
             Spacer(minLength: 4)
+
+            Button {
+                onToggleFavorite?()
+            } label: {
+                Image(systemName: item.isFavorite ? "star.fill" : "star")
+                    .font(.caption)
+                    .foregroundStyle(item.isFavorite ? Color.yellow : Color.gray.opacity(0.3))
+            }
+            .buttonStyle(.plain)
 
             Image(systemName: "chevron.right")
                 .font(.caption2.weight(.semibold))

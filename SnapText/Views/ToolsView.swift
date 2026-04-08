@@ -15,6 +15,16 @@ struct ToolsView: View {
                         ])
                     }
 
+                    // AI-Powered
+                    toolSection("AI-Powered", icon: "brain.head.profile") {
+                        toolGrid([
+                            ToolItem(title: "Smart Analyze", icon: "brain.head.profile", color: .purple, destination: AnyView(SmartSummaryView())),
+                            ToolItem(title: "Object Detector", icon: "eye.fill", color: .teal, destination: AnyView(ObjectDetectorView())),
+                            ToolItem(title: "Handwriting", icon: "hand.draw", color: .indigo, destination: AnyView(HandwritingView())),
+                            ToolItem(title: "Scan & Translate", icon: "translate", color: .green, destination: AnyView(ScanTranslateView())),
+                        ])
+                    }
+
                     // Smart Scanners
                     toolSection("Smart Scanners", icon: "sparkle.magnifyingglass") {
                         toolGrid([
@@ -29,10 +39,13 @@ struct ToolsView: View {
                         toolGrid([
                             ToolItem(title: "Image to PDF", icon: "photo.on.rectangle.angled", color: .red, destination: AnyView(ImageToPDFView())),
                             ToolItem(title: "Doc to PDF", icon: "doc.badge.arrow.up", color: .indigo, destination: AnyView(DocToPDFView())),
+                            ToolItem(title: "Merge PDFs", icon: "doc.on.doc.fill", color: .red, destination: AnyView(PDFMergeView())),
                             ToolItem(title: "Sign Document", icon: "signature", color: .green, destination: AnyView(DocumentSigningView())),
                             ToolItem(title: "Compress Image", icon: "arrow.down.right.and.arrow.up.left", color: .blue, destination: AnyView(ImageCompressorView())),
+                            ToolItem(title: "Resize Image", icon: "arrow.up.left.and.arrow.down.right", color: .cyan, destination: AnyView(ImageResizeView())),
                             ToolItem(title: "Passport Photo", icon: "person.crop.rectangle", color: .purple, destination: AnyView(PassportPhotoView())),
                             ToolItem(title: "Remove BG", icon: "person.and.background.strikethrough", color: .pink, destination: AnyView(RemoveBackgroundView())),
+                            ToolItem(title: "Watermark", icon: "textformat.abc.dottedunderline", color: .orange, destination: AnyView(WatermarkView())),
                         ])
                     }
 
@@ -58,7 +71,7 @@ struct ToolsView: View {
 
                     // Footer
                     VStack(spacing: 6) {
-                        Text("20 tools \u{2022} 20+ auto-detections")
+                        Text("27 tools \u{2022} 20+ auto-detections")
                             .font(.caption.bold())
                             .foregroundStyle(.secondary)
                         Text("Phone \u{2022} Email \u{2022} Address \u{2022} URL \u{2022} Date \u{2022} UPI \u{2022} Tracking \u{2022} WiFi \u{2022} Flight \u{2022} PAN \u{2022} Aadhaar \u{2022} GST \u{2022} IFSC \u{2022} Coordinates \u{2022} & more")
@@ -180,7 +193,7 @@ private struct ScanViewPush: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { viewModel.modelContext = modelContext }
         .fullScreenCover(isPresented: $viewModel.showCamera) {
-            CameraView { image in Task { await viewModel.processImage(image) } }.ignoresSafeArea()
+            LiveCameraView { image in Task { await viewModel.processImage(image) } }
         }
         .sheet(isPresented: $viewModel.showGallery) {
             ImagePicker { image in Task { await viewModel.processImage(image) } }
