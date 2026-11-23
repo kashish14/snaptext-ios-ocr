@@ -195,7 +195,7 @@ struct CaptureView: View {
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        directToolChip("Remove BG", icon: "person.and.background.strikethrough", color: .pink, tool: .removeBG)
+                        directToolChip("Remove BG", icon: "person.and.background.dotted", color: .pink, tool: .removeBG)
                         directToolChip("Compress", icon: "arrow.down.right.and.arrow.up.left", color: .blue, tool: .compress)
                         directToolChip("Resize", icon: "arrow.up.left.and.arrow.down.right", color: .cyan, tool: .imageResize)
                         directToolChip("Passport", icon: "person.crop.rectangle", color: .purple, tool: .passport)

@@ -86,7 +86,7 @@ struct RemoveBackgroundView: View {
             } else {
                 Spacer()
                 VStack(spacing: 24) {
-                    Image(systemName: "person.and.background.strikethrough")
+                    Image(systemName: "person.and.background.dotted")
                         .font(.system(size: 64))
                         .foregroundStyle(.tint)
                     VStack(spacing: 8) {

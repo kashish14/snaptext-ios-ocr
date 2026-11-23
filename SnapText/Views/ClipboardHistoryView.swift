@@ -6,6 +6,7 @@ struct ClipboardHistoryView: View {
     @Query(sort: \ClipboardItem.timestamp, order: .reverse) private var items: [ClipboardItem]
     @State private var copiedId: UUID?
     @State private var searchText = ""
+    @State private var confirmClear = false
 
     private let detector = SmartDetector()
 
@@ -41,13 +42,17 @@ struct ClipboardHistoryView: View {
             .toolbar {
                 if !items.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button("Clear All", role: .destructive) {
-                            withAnimation {
-                                for item in items { modelContext.delete(item) }
-                                try? modelContext.save()
+                        Button("Clear All", role: .destructive) { confirmClear = true }
+                            .confirmationDialog("Clear clipboard history?", isPresented: $confirmClear, titleVisibility: .visible) {
+                                Button("Clear All", role: .destructive) {
+                                    withAnimation {
+                                        for item in items { modelContext.delete(item) }
+                                        try? modelContext.save()
+                                    }
+                                }
+                            } message: {
+                                Text("This removes all \(items.count) saved items.")
                             }
-                        }
-                        .font(.caption)
                     }
                 }
             }

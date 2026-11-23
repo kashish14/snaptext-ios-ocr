@@ -326,7 +326,7 @@ final class ActionPriorityEngine {
         actions.append(QuickAction(
             id: "remove_bg",
             title: "Remove Background",
-            icon: "person.and.background.strikethrough",
+            icon: "person.and.background.dotted",
             color: .pink,
             score: ct == .image ? 85 : 20,
             category: .image,
