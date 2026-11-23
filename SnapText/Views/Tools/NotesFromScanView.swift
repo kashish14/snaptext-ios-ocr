@@ -178,7 +178,7 @@ struct NotesFromScanView: View {
 
     private func cleanupText(_ text: String) -> String {
         // Clean up OCR artifacts: merge broken lines, fix spacing
-        var lines = text.components(separatedBy: "\n")
+        let lines = text.components(separatedBy: "\n")
         var cleaned: [String] = []
         var current = ""
 

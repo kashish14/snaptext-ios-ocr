@@ -269,7 +269,7 @@ struct ObjectDetectorView: View {
                     }
                 }
 
-                await MainActor.run {
+                await MainActor.run { [objects] in
                     detectedObjects = objects
                     isProcessing = false
                     if objects.isEmpty {

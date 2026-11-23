@@ -29,7 +29,6 @@ struct SelectableTextView: UIViewRepresentable {
         let result = NSMutableAttributedString()
 
         let bodyFont = UIFont.preferredFont(forTextStyle: .body)
-        let smallFont = UIFont.preferredFont(forTextStyle: .caption1)
 
         // Paragraph style with comfortable line spacing
         let bodyParagraph = NSMutableParagraphStyle()
@@ -51,7 +50,7 @@ struct SelectableTextView: UIViewRepresentable {
         var previousLineWasEmpty = false
         var isFirstLine = true
 
-        for (index, line) in lines.enumerated() {
+        for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
 
             // Skip consecutive empty lines
