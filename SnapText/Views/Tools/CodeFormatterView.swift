@@ -139,7 +139,6 @@ struct CodeFormatterView: View {
         // Simple XML indentation
         var result = ""
         var indent = 0
-        var inTag = false
         var i = text.startIndex
 
         while i < text.endIndex {
@@ -153,10 +152,8 @@ struct CodeFormatterView: View {
                 }
                 result += String(repeating: "  ", count: indent)
                 result.append(ch)
-                inTag = true
             } else if ch == ">" {
                 result.append(ch)
-                inTag = false
                 // Check if this was an opening tag (not self-closing or closing)
                 let tagContent = extractLastTag(from: result)
                 if !tagContent.hasPrefix("/") && !tagContent.hasSuffix("/") {

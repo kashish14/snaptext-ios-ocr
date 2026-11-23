@@ -10,6 +10,7 @@ struct DocumentSigningView: View {
     @State private var showSignaturePad = false
     @State private var signaturePosition = CGSize.zero
     @State private var signatureScale: CGFloat = 1.0
+    @State private var previewSize = CGSize.zero
     @State private var pdfData: Data?
     @State private var savedDrawing: PKDrawing?
     @State private var applyBW = false
@@ -113,6 +114,7 @@ struct DocumentSigningView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { previewSize = $0 }
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal)
             .padding(.top, 8)
@@ -197,10 +199,13 @@ struct DocumentSigningView: View {
             let drawDoc = applyBW ? doc.blackAndWhite() : doc
             drawDoc.draw(in: CGRect(origin: .zero, size: docSize))
 
-            let sigWidth = 150 * signatureScale * (docSize.width / UIScreen.main.bounds.width)
+            // Map preview points to document pixels using the scaledToFit factor.
+            let fit = min(previewSize.width / docSize.width, previewSize.height / docSize.height)
+            let toDoc = fit > 0 ? 1 / fit : 1
+            let sigWidth = 150 * signatureScale * toDoc
             let sigHeight = sigWidth * (sig.size.height / sig.size.width)
-            let centerX = docSize.width / 2 + signaturePosition.width * (docSize.width / UIScreen.main.bounds.width)
-            let centerY = docSize.height / 2 + signaturePosition.height * (docSize.height / UIScreen.main.bounds.height)
+            let centerX = docSize.width / 2 + signaturePosition.width * toDoc
+            let centerY = docSize.height / 2 + signaturePosition.height * toDoc
             let sigRect = CGRect(
                 x: centerX - sigWidth / 2,
                 y: centerY - sigHeight / 2,
@@ -345,7 +350,7 @@ struct SignaturePadSheet: View {
         let drawing = canvasView.drawing
         guard !drawing.bounds.isEmpty else { return nil }
         let bounds = drawing.bounds.insetBy(dx: -10, dy: -10)
-        return drawing.image(from: bounds, scale: UIScreen.main.scale)
+        return drawing.image(from: bounds, scale: canvasView.traitCollection.displayScale)
     }
 }
 

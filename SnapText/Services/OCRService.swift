@@ -21,7 +21,7 @@ final class OCRService {
         }
     }
 
-    enum RecognitionMode {
+    nonisolated enum RecognitionMode {
         case fast
         case accurate
     }

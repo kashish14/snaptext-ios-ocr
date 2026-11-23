@@ -222,8 +222,9 @@ struct ObjectDetectorView: View {
         errorMessage = nil
         detectedObjects = []
 
+        let oriented = image.fixedOrientation()
         Task.detached {
-            guard let cgImage = image.fixedOrientation().cgImage else {
+            guard let cgImage = oriented.cgImage else {
                 await MainActor.run {
                     errorMessage = "Invalid image"
                     isProcessing = false
