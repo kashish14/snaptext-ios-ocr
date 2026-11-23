@@ -6,20 +6,104 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AA5E0000000000000000000C /* SnapTextShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA5E00000000000000000001; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA5E0000000000000000000E = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FB85430A2F7D0D91003682AA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA5E00000000000000000008;
+			remoteInfo = SnapTextShare;
+		};
+		AA5E0000000000000000006E = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FB85430A2F7D0D91003682AA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FB8543112F7D0D91003682AA;
+			remoteInfo = SnapText;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AA5E0000000000000000000D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				AA5E0000000000000000000C /* SnapTextShare.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		FB8543122F7D0D91003682AA /* SnapText.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SnapText.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA5E00000000000000000001 /* SnapTextShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SnapTextShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA5E00000000000000000065 /* SnapTextTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SnapTextTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		AA5E00000000000000000003 /* Exceptions for "SnapTextShare" folder in "SnapTextShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = AA5E00000000000000000008 /* SnapTextShare */;
+		};
+		AA5E00000000000000000004 /* Exceptions for "SnapText" folder in "SnapTextShare" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Services/OCRService.swift,
+			);
+			target = AA5E00000000000000000008 /* SnapTextShare */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		FB8543142F7D0D91003682AA /* SnapText */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AA5E00000000000000000004 /* Exceptions for "SnapText" folder in "SnapTextShare" target */,
+			);
 			path = SnapText;
+			sourceTree = "<group>";
+		};
+		AA5E00000000000000000002 /* SnapTextShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				AA5E00000000000000000003 /* Exceptions for "SnapTextShare" folder in "SnapTextShare" target */,
+			);
+			path = SnapTextShare;
+			sourceTree = "<group>";
+		};
+		AA5E00000000000000000066 /* SnapTextTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SnapTextTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		FB85430F2F7D0D91003682AA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA5E00000000000000000006 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA5E00000000000000000068 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +117,8 @@
 			isa = PBXGroup;
 			children = (
 				FB8543142F7D0D91003682AA /* SnapText */,
+				AA5E00000000000000000002 /* SnapTextShare */,
+				AA5E00000000000000000066 /* SnapTextTests */,
 				FB8543132F7D0D91003682AA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +127,8 @@
 			isa = PBXGroup;
 			children = (
 				FB8543122F7D0D91003682AA /* SnapText.app */,
+				AA5E00000000000000000001 /* SnapTextShare.appex */,
+				AA5E00000000000000000065 /* SnapTextTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -55,10 +143,12 @@
 				FB85430E2F7D0D91003682AA /* Sources */,
 				FB85430F2F7D0D91003682AA /* Frameworks */,
 				FB8543102F7D0D91003682AA /* Resources */,
+				AA5E0000000000000000000D /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				AA5E0000000000000000000F /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				FB8543142F7D0D91003682AA /* SnapText */,
@@ -69,6 +159,51 @@
 			productName = SnapText;
 			productReference = FB8543122F7D0D91003682AA /* SnapText.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AA5E00000000000000000008 /* SnapTextShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA5E00000000000000000009;
+			buildPhases = (
+				AA5E00000000000000000005 /* Sources */,
+				AA5E00000000000000000006 /* Frameworks */,
+				AA5E00000000000000000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA5E00000000000000000002 /* SnapTextShare */,
+			);
+			name = SnapTextShare;
+			packageProductDependencies = (
+			);
+			productName = SnapTextShare;
+			productReference = AA5E00000000000000000001 /* SnapTextShare */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		AA5E0000000000000000006A /* SnapTextTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA5E0000000000000000006B;
+			buildPhases = (
+				AA5E00000000000000000067 /* Sources */,
+				AA5E00000000000000000068 /* Frameworks */,
+				AA5E00000000000000000069 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA5E0000000000000000006F /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA5E00000000000000000066 /* SnapTextTests */,
+			);
+			name = SnapTextTests;
+			packageProductDependencies = (
+			);
+			productName = SnapTextTests;
+			productReference = AA5E00000000000000000065 /* SnapTextTests */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -82,6 +217,13 @@
 				TargetAttributes = {
 					FB8543112F7D0D91003682AA = {
 						CreatedOnToolsVersion = 26.4;
+					};
+					AA5E00000000000000000008 = {
+						CreatedOnToolsVersion = 26.4;
+					};
+					AA5E0000000000000000006A = {
+						CreatedOnToolsVersion = 26.4;
+						TestTargetID = FB8543112F7D0D91003682AA;
 					};
 				};
 			};
@@ -100,12 +242,28 @@
 			projectRoot = "";
 			targets = (
 				FB8543112F7D0D91003682AA /* SnapText */,
+				AA5E00000000000000000008 /* SnapTextShare */,
+				AA5E0000000000000000006A /* SnapTextTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		FB8543102F7D0D91003682AA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA5E00000000000000000007 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA5E00000000000000000069 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +280,35 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA5E00000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA5E00000000000000000067 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA5E0000000000000000000F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = AA5E00000000000000000008 /* SnapTextShare */;
+			targetProxy = AA5E0000000000000000000E;
+		};
+		AA5E0000000000000000006F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FB8543112F7D0D91003682AA /* SnapText */;
+			targetProxy = AA5E0000000000000000006E;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		FB85431B2F7D0D92003682AA /* Debug */ = {
@@ -333,6 +519,106 @@
 			};
 			name = Release;
 		};
+		AA5E0000000000000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnapTextShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SnapText;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks @executable_path/../../Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.kashish14.SnapText.Share";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA5E0000000000000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SnapTextShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SnapText;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks @executable_path/../../Frameworks";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.kashish14.SnapText.Share";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		AA5E0000000000000000006C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.kashish14.SnapTextTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SnapText.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SnapText";
+			};
+			name = Debug;
+		};
+		AA5E0000000000000000006D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.4;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.kashish14.SnapTextTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SnapText.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SnapText";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -350,6 +636,24 @@
 			buildConfigurations = (
 				FB85431E2F7D0D92003682AA /* Debug */,
 				FB85431F2F7D0D92003682AA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA5E00000000000000000009 = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA5E0000000000000000000A /* Debug */,
+				AA5E0000000000000000000B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA5E0000000000000000006B = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA5E0000000000000000006C /* Debug */,
+				AA5E0000000000000000006D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
