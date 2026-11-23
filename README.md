@@ -6,7 +6,7 @@
 
 Screenshot → Share → SnapText → copied. On-device OCR, smart actions, 30+ tools. No account, no servers, no tracking.
 
-[![CI](https://github.com/kashish14/SnapText/actions/workflows/ci.yml/badge.svg)](https://github.com/kashish14/SnapText/actions/workflows/ci.yml)
+[![CI](https://github.com/kashish14/snaptext-ios-ocr/actions/workflows/ci.yml/badge.svg)](https://github.com/kashish14/snaptext-ios-ocr/actions/workflows/ci.yml)
 ![Platform](https://img.shields.io/badge/platform-iOS%2026.4%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-5-orange)
 ![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-informational)
@@ -68,8 +68,8 @@ Plus searchable **scan history** and **clipboard history**, both stored locally 
 
 ### Build & run
 ```bash
-git clone https://github.com/kashish14/SnapText.git
-cd SnapText
+git clone https://github.com/kashish14/snaptext-ios-ocr.git
+cd snaptext-ios-ocr
 open SnapText.xcodeproj
 ```
 1. Select the **SnapText** target, open **Signing & Capabilities** and choose your own Team.
