@@ -60,4 +60,4 @@ SnapTextTests/                 Unit tests (Swift Testing)
 
 ## Adding things
 - **A new entity type:** add a case to `DetectedEntity.EntityType`, a pattern and detection pass in `SmartDetector`, an action in `ActionPriorityEngine`, and a test in `SnapTextTests/SmartDetectorTests.swift`.
-- **A new tool:** add a view under `Views/Tools/`, register it in `ToolsView.swift`, and read `ToolContext` if it should pre-fill from a scan.
+- **A new tool:** add a view under `Views/Tools/`, add a case to `DirectTool` (and a chip) in `Views/CaptureView.swift`, and read `ToolContext` if it should pre-fill from a scan.

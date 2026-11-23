@@ -33,14 +33,15 @@ SnapText is built in milestones. Items marked **help wanted** are good places to
 - [ ] Expand test coverage: `ActionPriorityEngine`, `OCRService` with fixture images (**help wanted**)
 - [ ] Swift 6 strict-concurrency clean build (**help wanted**)
 - [ ] VoiceOver and Dynamic Type audit (**help wanted**)
-- [ ] App icon and screenshots for the README
+- [x] README screenshots
+- [ ] App icon
 
 ## 🔭 Next
 - [ ] Home Screen widget: tap to scan, last 3 scans to re-copy (**help wanted**)
 - [ ] App Group so Share Extension scans appear in History
 - [ ] Onboarding: two skippable screens
 - [ ] iPad and visionOS layout polish
-- [ ] Localization (strings are already in a String Catalog) (**help wanted**)
+- [ ] Localization via a String Catalog (**help wanted**)
 - [ ] On-device text cleanup and summarization with Apple Foundation Models
 
 ## Non-goals

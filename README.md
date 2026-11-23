@@ -4,16 +4,23 @@
 
 **Turn anything you can see into text you can use, in one tap.**
 
-Screenshot → Share → SnapText → copied. On-device OCR, smart actions, 30+ tools. No account, no servers, no tracking.
+Screenshot → Share → SnapText → copied. On-device OCR, smart actions, 27 built-in tools. No account, no servers, no tracking.
 
 [![CI](https://github.com/kashish14/snaptext-ios-ocr/actions/workflows/ci.yml/badge.svg)](https://github.com/kashish14/snaptext-ios-ocr/actions/workflows/ci.yml)
 ![Platform](https://img.shields.io/badge/platform-iOS%2026.4%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-5-orange)
+![Dependencies](https://img.shields.io/badge/dependencies-none-lightgrey)
 ![SwiftUI](https://img.shields.io/badge/UI-SwiftUI-informational)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 </div>
+
+<p align="center">
+  <img src="docs/screenshots/capture-light.png" width="260" alt="SnapText capture screen in light mode">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/capture-dark.png" width="260" alt="SnapText capture screen in dark mode">
+</p>
 
 ---
 
@@ -32,7 +39,7 @@ Copying text from a screenshot usually takes five steps across three apps. SnapT
 | | |
 |---|---|
 | **Share Extension** | Share any image from Photos, Screenshots or any app. Text is copied instantly |
-| **Live Camera** | Point and scan, with real-time text recognition |
+| **Live Camera** | Full-screen camera with flash and front/back toggle; text is extracted from the shot |
 | **Gallery & Batch** | Pick one image or many and extract them all at once |
 | **Document Scanner** | Edge detection and perspective correction via VisionKit |
 | **QR Scanner** | URLs, Wi-Fi, contacts, plain text |
